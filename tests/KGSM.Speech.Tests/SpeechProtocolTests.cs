@@ -183,6 +183,36 @@ public class SpeechProtocolTests
     }
 
     [Fact]
+    public void AskingForAFormatCarriesItBesideTheVoice()
+    {
+        (uint id, SpeechProtocol.Format format, string voice, string text) =
+            SpeechProtocol.ReadSynthesizeAs(
+                SpeechProtocol.SynthesizeAs(5, SpeechProtocol.Format.Wav, "bf_emma", "One moment."));
+
+        id.Should().Be(5);
+        format.Should().Be(SpeechProtocol.Format.Wav);
+        voice.Should().Be("bf_emma");
+        text.Should().Be("One moment.");
+    }
+
+    [Fact]
+    public void AFormattedRequestStillMeansThisHostsVoiceWhenItNamesNone()
+    {
+        (_, SpeechProtocol.Format format, string voice, string text) = SpeechProtocol.ReadSynthesizeAs(
+            SpeechProtocol.SynthesizeAs(1, SpeechProtocol.Format.Pcm, string.Empty, "Ready."));
+
+        format.Should().Be(SpeechProtocol.Format.Pcm);
+        voice.Should().BeEmpty();
+        text.Should().Be("Ready.");
+    }
+
+    [Fact]
+    public void TheShorthandAndTheFormattedRequestAreDifferentMessages() =>
+        // Deliberately not one message with a field: a deployed client speaks the shorthand, and a
+        // shape that changed under it would be misread rather than refused.
+        SpeechProtocol.Kind.Synthesize.Should().NotBe(SpeechProtocol.Kind.SynthesizeAs);
+
+    [Fact]
     public void SynthesisedAudioComesBackWhole()
     {
         // Ten seconds of 24kHz mono, which is a long answer and the size this actually carries.

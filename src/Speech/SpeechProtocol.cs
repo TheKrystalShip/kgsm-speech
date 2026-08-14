@@ -51,7 +51,11 @@ public static class SpeechProtocol
         /// <summary>What was heard in it.</summary>
         Transcribed = 4,
 
-        /// <summary>Say these words.</summary>
+        /// <summary>Say these words, as raw PCM.</summary>
+        /// <remarks>
+        /// The shorthand, and the right message for a caller that plays audio itself: a Discord
+        /// connection takes PCM and would only have to unwrap a container to get back to it.
+        /// </remarks>
         Synthesize = 5,
 
         /// <summary>The audio of them.</summary>
@@ -65,6 +69,35 @@ public static class SpeechProtocol
 
         /// <summary>Speak in this voice from now on — this host's voice, on every surface.</summary>
         SpeakAs = 9,
+
+        /// <summary>
+        /// Say these words in a named <see cref="Format"/> — for a caller that needs a container
+        /// rather than raw samples.
+        /// </summary>
+        /// <remarks>
+        /// Its own message rather than a field on <see cref="Synthesize"/>, because that one is
+        /// already spoken by deployed clients: a shape that changed under them would be misread
+        /// rather than refused. A caller that wants PCM keeps sending the shorthand forever.
+        /// </remarks>
+        SynthesizeAs = 10,
+    }
+
+    /// <summary>
+    /// What a caller wants the audio wrapped in.
+    /// </summary>
+    /// <remarks>
+    /// Negotiated per request rather than configured, because two surfaces on one host want different
+    /// things at the same moment: a voice connection plays samples, and a browser needs something
+    /// <c>decodeAudioData</c> understands. The daemon synthesises once either way — a format is a
+    /// wrapper applied on the way out, not a second synthesis.
+    /// </remarks>
+    public enum Format : byte
+    {
+        /// <summary>24kHz mono signed 16-bit little-endian samples, exactly as Kokoro produces them.</summary>
+        Pcm = 0,
+
+        /// <summary>The same samples behind a 44-byte RIFF header — what a browser can decode as-is.</summary>
+        Wav = 1,
     }
 
     /// <summary>Why a request came back without what was asked for.</summary>
@@ -223,6 +256,31 @@ public static class SpeechProtocol
         return (IdOf(payload),
             Encoding.UTF8.GetString(payload, 8, named),
             Encoding.UTF8.GetString(payload, 8 + named, payload.Length - 8 - named));
+    }
+
+    /// <summary>Words to say, wrapped in <paramref name="format"/> on the way back.</summary>
+    public static byte[] SynthesizeAs(uint id, Format format, string voice, string text)
+    {
+        byte[] named = Encoding.UTF8.GetBytes(voice);
+        byte[] said = Encoding.UTF8.GetBytes(text);
+        byte[] payload = new byte[4 + 1 + 4 + named.Length + said.Length];
+
+        BitConverter.TryWriteBytes(payload.AsSpan(0, 4), id);
+        payload[4] = (byte)format;
+        BitConverter.TryWriteBytes(payload.AsSpan(5, 4), named.Length);
+        named.CopyTo(payload, 9);
+        said.CopyTo(payload, 9 + named.Length);
+
+        return payload;
+    }
+
+    public static (uint Id, Format Format, string Voice, string Text) ReadSynthesizeAs(byte[] payload)
+    {
+        int named = BitConverter.ToInt32(payload, 5);
+
+        return (IdOf(payload), (Format)payload[4],
+            Encoding.UTF8.GetString(payload, 9, named),
+            Encoding.UTF8.GetString(payload, 9 + named, payload.Length - 9 - named));
     }
 
     public static byte[] Synthesized(uint id, Outcome outcome, byte[] audio)

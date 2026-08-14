@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-15
+
+### Added — audio in a container, for callers that cannot play raw samples
+
+`SynthesizeAs` asks for the samples wrapped in a named format; `Wave.Mono16` supplies the only one
+there is so far, a 44-byte RIFF header a browser decodes with no library. The daemon synthesises once
+either way — a format is a wrapper applied on the way out, not a second synthesis.
+
+⚠ **Its own message rather than a field on `Synthesize`.** That one is already spoken by a deployed
+client, and a shape that changed under it would be misread rather than refused. A caller that plays
+audio itself — a Discord connection takes PCM — keeps sending the shorthand forever and needs no
+version bump.
+
+WAV is deliberately not the smallest thing that could go over a wire: a spoken sentence is ~120KB
+where Opus would be ~7KB. The trade buys no codec, no container muxer and no dependency, and because
+the format is negotiated per request, a smaller one can be added here alone — no client, relay or
+contract change.
+
 ## [1.0.1] - 2026-08-15
 
 ### Fixed — the unit no longer names the Control Panel

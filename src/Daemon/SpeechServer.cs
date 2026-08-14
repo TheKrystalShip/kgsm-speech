@@ -151,18 +151,16 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
                 case SpeechProtocol.Kind.Synthesize:
                 {
                     (uint id, string named, string text) = SpeechProtocol.ReadSynthesize(payload);
-                    await LoadedAsync(ct);
+                    await SaidAsync(stream, writing, id, SpeechProtocol.Format.Pcm, named, text, ct);
+                    break;
+                }
 
-                    // An empty name is a surface asking for this host's voice, which is what they all
-                    // should do — the point of the setting is that they agree without coordinating.
-                    string voice = string.IsNullOrWhiteSpace(named) ? _voice : named;
+                case SpeechProtocol.Kind.SynthesizeAs:
+                {
+                    (uint id, SpeechProtocol.Format format, string named, string text) =
+                        SpeechProtocol.ReadSynthesizeAs(payload);
 
-                    (SpeechProtocol.Outcome outcome, byte[] audio) = _mouth is null
-                        ? (SpeechProtocol.Outcome.Unavailable, [])
-                        : await _mouth.SayAsync(text, voice, ct);
-
-                    await SendAsync(stream, writing, SpeechProtocol.Kind.Synthesized,
-                        SpeechProtocol.Synthesized(id, outcome, audio), ct);
+                    await SaidAsync(stream, writing, id, format, named, text, ct);
                     break;
                 }
 
@@ -204,6 +202,34 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
             // bad frame would take a whole voice session with it.
             logger.LogWarning(ex, "Speech: could not answer a {Kind} request", kind);
         }
+    }
+
+    /// <summary>
+    /// Synthesises one request and answers it, whichever message asked.
+    /// </summary>
+    /// <remarks>
+    /// The format is applied on the way out, so the two messages differ in their wrapper and in
+    /// nothing else — one synthesis, one queue, one answer shape.
+    /// </remarks>
+    private async Task SaidAsync(
+        Stream stream, SemaphoreSlim writing, uint id, SpeechProtocol.Format format,
+        string named, string text, CancellationToken ct)
+    {
+        await LoadedAsync(ct);
+
+        // An empty name is a surface asking for this host's voice, which is what they all should do —
+        // the point of the setting is that they agree without coordinating.
+        string voice = string.IsNullOrWhiteSpace(named) ? _voice : named;
+
+        (SpeechProtocol.Outcome outcome, byte[] audio) = _mouth is null
+            ? (SpeechProtocol.Outcome.Unavailable, [])
+            : await _mouth.SayAsync(text, voice, ct);
+
+        if (outcome == SpeechProtocol.Outcome.Done && format == SpeechProtocol.Format.Wav)
+            audio = Wave.Mono16(audio);
+
+        await SendAsync(stream, writing, SpeechProtocol.Kind.Synthesized,
+            SpeechProtocol.Synthesized(id, outcome, audio), ct);
     }
 
     /// <summary>

@@ -160,6 +160,34 @@ public sealed class SpeechClient : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Says <paramref name="text"/> wrapped in <paramref name="format"/>. Null when it could not be said.
+    /// </summary>
+    /// <remarks>
+    /// For a caller that cannot play raw samples — a browser wants something
+    /// <c>decodeAudioData</c> understands. The daemon synthesises once either way; a format is a
+    /// wrapper applied on the way out.
+    /// </remarks>
+    /// <param name="text">What to say. Plain text — markup is read out as the characters it is.</param>
+    /// <param name="format">The container to wrap the samples in.</param>
+    /// <param name="voice">Null speaks in this host's voice, which is what a surface should ask for.</param>
+    /// <param name="ct">Abandons the request.</param>
+    public async Task<byte[]?> SynthesizeAsync(
+        string text, SpeechProtocol.Format format, string? voice = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        (SpeechProtocol.Outcome outcome, byte[] payload) = await AskAsync(
+            SpeechProtocol.Kind.SynthesizeAs,
+            id => SpeechProtocol.SynthesizeAs(id, format, voice ?? string.Empty, text),
+            AnswerWithin, ct).ConfigureAwait(false);
+
+        if (outcome != SpeechProtocol.Outcome.Done) return null;
+
+        (_, SpeechProtocol.Outcome said, byte[] audio) = SpeechProtocol.ReadSynthesized(payload);
+        return said == SpeechProtocol.Outcome.Done && audio.Length > 0 ? audio : null;
+    }
+
+    /// <summary>
     /// The voices this host has, best-first, and the one it is speaking in. Empty when there is none.
     /// </summary>
     /// <remarks>
