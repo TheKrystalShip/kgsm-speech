@@ -1,0 +1,28 @@
+[Unit]
+Description=KGSM speech engine socket
+Documentation=https://github.com/TheKrystalShip
+
+[Socket]
+# The socket every surface reaches speech on. systemd binds and listens here and starts
+# kgsm-speech.service on the first connection (socket activation), passing this socket as fd 3 — so
+# the daemon need not hold 1.6GB and a slice of the card 24/7. It wakes on demand, and when it idles
+# out (Speech__IdleMinutes) this socket stays bound: the next surface to connect brings it back with
+# nothing lost.
+ListenStream=/run/kgsm-speech/speech.sock
+
+# The socket's filesystem permissions ARE the access boundary — there is no authentication in the
+# daemon and there should not be: everything on the other side is a service on this host running as
+# this user. deploy.sh rewrites these to the deploying user, the same way it rewrites User=/Group= in
+# the service unit.
+SocketUser=kgsm
+SocketGroup=kgsm
+SocketMode=0660
+
+# systemd creates and owns this runtime dir. It MUST exist before the socket is bound, and the socket
+# is bound before the service ever starts — so RuntimeDirectory belongs on THIS unit, not on the
+# service. (Declaring it only on the service would be too late: the bind would fail with ENOENT.)
+RuntimeDirectory=kgsm-speech
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=sockets.target

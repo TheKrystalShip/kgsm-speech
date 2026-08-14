@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>TheKrystalShip.KGSM.Speech.Daemon</RootNamespace>
+    <AssemblyName>kgsm-speech</AssemblyName>
+    <Version>1.0.0</Version>
+
+    <!-- Framework-dependent single-file deploy: the host has the .NET 10 runtime, so it is not
+         bundled. The RID is supplied at publish time (deploy/deploy.sh passes -r linux-x64). -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <SelfContained>false</SelfContained>
+
+    <!-- Workstation GC, not the default Server GC. This daemon's memory is dominated by two models
+         and the CUDA runtime behind them; a per-core heap on top of that is a standby cache nobody
+         asked for, on a process whose whole design is about giving memory back. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+
+    <!-- The leaf config descriptor is generated from the settings type in this project. These name
+         the two files the generator works between. -->
+    <LeafSettingsFile>kgsm-speech.settings.json</LeafSettingsFile>
+    <LeafDescriptorFile>$(MSBuildProjectDirectory)/../../deploy/kgsm-speech.leaf.json</LeafDescriptorFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Speech/TheKrystalShip.KGSM.Speech.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KGSM.Speech.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Both runtimes ship: whisper.net picks the first that initialises, so one binary is correct
+         on a host with a card and on one without. -->
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime.Cuda" Version="1.9.1" />
+
+    <!-- The ONNX reference is direct rather than transitive from KokoroSharp, because the direct
+         reference is what decides which onnxruntime assembly wins — the GPU one. -->
+    <PackageReference Include="KokoroSharp" Version="0.8.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.29.0" />
+
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+
+    <PackageReference Include="TheKrystalShip.KGSM.LeafConfig" Version="2.2.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="kgsm-speech.settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- KokoroSharp copies its voice files to the build output and stops there — its own targets have
+       no publish step — so a published daemon loads the model and then cannot find a voice to speak
+       in. They are small and the voice is a runtime setting, so all of them ship rather than only
+       the configured one. -->
+  <Target Name="PublishKokoroVoices" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <_KokoroVoice Include="$(OutputPath)voices/**/*" />
+      <ResolvedFileToPublish Include="@(_KokoroVoice)">
+        <RelativePath>voices/%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <!-- Drop the Windows ONNX natives from a Linux publish. ONNX P/Invokes the literal name
+       "onnxruntime.dll", so on Linux the resolver finds that Windows file first, fails with
+       "invalid ELF header", and never goes on to try libonnxruntime.so — synthesis then reports
+       itself unavailable on a host that has everything it needs. -->
+  <Target Name="DropWindowsOnnxNatives" AfterTargets="ComputeFilesToPublish"
+          Condition="'$(RuntimeIdentifier)' != '' and !$(RuntimeIdentifier.StartsWith('win'))">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="'%(Extension)' == '.dll' and $([System.String]::Copy('%(Filename)').StartsWith('onnxruntime'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

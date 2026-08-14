@@ -1,0 +1,36 @@
+{
+  // kgsm-speech — this host's speech engine. Every value here can be overridden by an environment
+  // variable of the form Speech__Key (the Control Panel writes those), so this file is the default
+  // and never the only word.
+  "Speech": {
+    // The models. Outside the install prefix on purpose: the deploy syncs that prefix with
+    // `rsync --delete`, and these are 813MB that should survive it. deploy/setup.sh fetches them.
+    "ModelPath": "/var/lib/kgsm-speech/models/ggml-small.en.bin",
+    "UseGpu": true,
+
+    "SpeechModelPath": "/var/lib/kgsm-speech/models/kokoro.onnx",
+    "SpeakUseGpu": true,
+
+    // The voice every surface on this host speaks in. Kokoro's best-graded voice, and the one thing
+    // that makes an assistant sound the same in Discord as it does in a browser — surfaces ask for
+    // "this host's voice" rather than naming one, so there is nothing to keep in step.
+    "Voice": "af_heart",
+
+    // How long to stay loaded with nothing to say. Zero stays. Ending the process is the only thing
+    // that returns the 1.6GB and the gigabyte of video memory the models cost — unloading inside a
+    // running process does not, because the CUDA runtime behind them is resident for the life of the
+    // process. Nothing is lost by exiting: systemd holds the socket, and the next request starts this
+    // again at the cost of a few seconds' loading.
+    "IdleMinutes": 0,
+
+    // ⚠ Must match ListenStream= in kgsm-speech.socket. systemd binds that path and hands the
+    // listening socket over, so this is only consulted when the daemon is started by hand.
+    "SocketPath": "/run/kgsm-speech/speech.sock"
+  },
+
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}

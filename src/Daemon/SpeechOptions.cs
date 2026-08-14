@@ -1,0 +1,115 @@
+using TheKrystalShip.KGSM.LeafConfig;
+
+namespace TheKrystalShip.KGSM.Speech.Daemon;
+
+/// <summary>
+/// This host's speech configuration — the models, the card, and the voice it answers in.
+/// </summary>
+/// <remarks>
+/// <b>The voice belongs here, not to a surface.</b> Every surface that speaks asks this daemon, and
+/// none of them names a voice unless it deliberately wants a different one — so a person hears the
+/// same assistant in Discord as in a browser, and changing that is one setting in one place.
+/// </remarks>
+[LeafSection(Section)]
+public class SpeechOptions
+{
+    public const string Section = "Speech";
+
+    /// <summary>
+    /// The whisper model used to recognise speech.
+    /// </summary>
+    /// <remarks>
+    /// Outside the install prefix, because the deploy syncs that prefix with <c>rsync --delete</c> and
+    /// a 488MB download is not something to re-fetch on every deploy.
+    /// </remarks>
+    /// <panel>The speech recognition model file. Without it nothing said out loud is understood.</panel>
+    [LeafField("recognitionModel", "Recognition model", Group = "models", Type = LeafType.Path)]
+    public string ModelPath { get; set; } = "/var/lib/kgsm-speech/models/ggml-small.en.bin";
+
+    /// <panel>Whether to recognise speech on the graphics card. Around forty times faster than the
+    /// processor; a host without a usable card falls back on its own.</panel>
+    [LeafField("recognitionUseGpu", "Recognise on the GPU", Group = "models")]
+    public bool UseGpu { get; set; } = true;
+
+    /// <summary>The Kokoro model used to synthesise speech.</summary>
+    /// <panel>The speech synthesis model file. Without it surfaces answer in text only.</panel>
+    [LeafField("synthesisModel", "Synthesis model", Group = "models", Type = LeafType.Path)]
+    public string SpeechModelPath { get; set; } = "/var/lib/kgsm-speech/models/kokoro.onnx";
+
+    /// <panel>Whether to synthesise speech on the graphics card. Around eight times faster than the
+    /// processor and worth roughly 700MB of video memory; a host without a usable card falls back on
+    /// its own.</panel>
+    [LeafField("synthesisUseGpu", "Synthesise on the GPU", Group = "models")]
+    public bool SpeakUseGpu { get; set; } = true;
+
+    /// <summary>
+    /// Which of Kokoro's voices this host speaks in.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The English ones, listed best-first within each accent.</b> Kokoro ships voices for eight
+    /// other languages and they are on disk beside these, but they expect text in those languages —
+    /// offered here they would be twenty-odd ways to read an English answer badly. Anything Kokoro can
+    /// load still works if it is set directly; what this list is, is the set worth choosing from.
+    /// </para>
+    /// <para>
+    /// <b>Ordered by how much speech each was trained on, because that is what is audible.</b> The
+    /// difference between the top of a group and the bottom is not accent or timbre — it is how
+    /// synthetic the voice sounds, and it is not subtle.
+    /// </para>
+    /// </remarks>
+    /// <panel>The voice every surface on this host speaks in — Discord, and anything else that asks.
+    /// The first two letters are the accent and the speaker — <code>b</code> British,
+    /// <code>a</code> American, then <code>f</code> or <code>m</code>. They are listed best-first
+    /// within each accent, and the gap is worth hearing: the ones at the top of each group were
+    /// trained on hours of speech and the ones at the bottom on minutes, which is the difference
+    /// between a voice that sounds like a person and one that sounds like a synthesiser.</panel>
+    [LeafField("voice", "Speaking voice", Group = "voice", Type = LeafType.Enum, Values = [
+        // American — af_heart and af_bella are the best-trained voices Kokoro ships at all.
+        "af_heart", "af_bella", "af_nicole", "af_aoede", "af_kore", "af_sarah",
+        "af_alloy", "af_nova", "af_sky", "af_jessica", "af_river",
+        "am_fenrir", "am_michael", "am_puck", "am_echo", "am_eric",
+        "am_liam", "am_onyx", "am_santa", "am_adam",
+        // British.
+        "bf_emma", "bf_isabella", "bf_alice", "bf_lily",
+        "bm_george", "bm_fable", "bm_lewis", "bm_daniel",
+    ])]
+    public string Voice { get; set; } = "af_heart";
+
+    /// <summary>
+    /// How long to stay loaded with nothing to say. Zero stays.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Ending is the only way to give the memory back.</b> The models cost this host about 1.6GB
+    /// and a gigabyte of video memory, and neither is released by unloading a model inside a running
+    /// process — the CUDA runtime behind them is resident for the life of whatever loaded it. So the
+    /// lever is the process, and this is the lever.
+    /// </para>
+    /// <para>
+    /// <b>Nothing is lost by exiting.</b> systemd holds the socket whether or not this is running, so
+    /// the next request starts it again; a surface reconnects without noticing. What it costs is the
+    /// few seconds of loading, paid by whoever speaks next.
+    /// </para>
+    /// </remarks>
+    /// <panel>How many minutes to stay loaded after the last thing said or heard. The models cost
+    /// around 1.6GB of memory and a gigabyte of video memory, all of which comes back when this
+    /// exits — but loading them again takes a few seconds, which the next person to speak waits for.
+    /// Zero stays loaded until the host restarts.</panel>
+    [LeafField("idleMinutes", "Unload after", Group = "lifetime", Unit = "minutes", Min = 0, Max = 1440)]
+    public int IdleMinutes { get; set; } = 0;
+
+    /// <summary>
+    /// The socket surfaces reach this daemon on.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ Must match the <c>ListenStream=</c> in <c>kgsm-speech.socket</c>: systemd binds that path and
+    /// hands the listening socket over, so this value is only consulted when the daemon is started by
+    /// hand. Changing one without the other leaves surfaces connecting to a socket nobody serves.
+    /// </remarks>
+    /// <panel>The unix socket other services reach this one on. It has to match the socket unit, so
+    /// leave it alone unless you are moving both.</panel>
+    [LeafField("socketPath", "Control socket", Group = "wiring", Type = LeafType.Path,
+        Risk = LeafRisk.Wiring)]
+    public string SocketPath { get; set; } = "/run/kgsm-speech/speech.sock";
+}

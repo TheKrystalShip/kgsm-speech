@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "id": "speech",
+  "displayName": "Speech",
+  "unit": "kgsm-speech.service",
+  "role": "The host's voice — speech recognition and synthesis for every surface that listens or speaks.",
+  "onDemand": true,
+  "applyMode": "restart",
+  "floorSources": [],
+  "groups": [
+    {
+      "id": "general",
+      "label": "General",
+      "order": 0
+    },
+    {
+      "id": "voice",
+      "label": "Voice",
+      "order": 1
+    },
+    {
+      "id": "models",
+      "label": "Models",
+      "order": 2
+    },
+    {
+      "id": "lifetime",
+      "label": "Staying loaded",
+      "order": 3
+    },
+    {
+      "id": "wiring",
+      "label": "Wiring",
+      "order": 4
+    }
+  ],
+  "fields": [
+    {
+      "key": "logLevel",
+      "env": "Logging__LogLevel__Default",
+      "label": "Log level",
+      "description": "Minimum severity this leaf logs.",
+      "group": "general",
+      "type": "enum",
+      "values": [
+        "Trace",
+        "Debug",
+        "Information",
+        "Warning",
+        "Error",
+        "Critical"
+      ],
+      "default": "Information",
+      "risk": "safe"
+    },
+    {
+      "key": "voice",
+      "env": "Speech__Voice",
+      "label": "Speaking voice",
+      "description": "The voice every surface on this host speaks in — Discord, and anything else that asks. The first two letters are the accent and the speaker — b British, a American, then f or m. They are listed best-first within each accent, and the gap is worth hearing: the ones at the top of each group were trained on hours of speech and the ones at the bottom on minutes, which is the difference between a voice that sounds like a person and one that sounds like a synthesiser.",
+      "group": "voice",
+      "type": "enum",
+      "values": [
+        "af_heart",
+        "af_bella",
+        "af_nicole",
+        "af_aoede",
+        "af_kore",
+        "af_sarah",
+        "af_alloy",
+        "af_nova",
+        "af_sky",
+        "af_jessica",
+        "af_river",
+        "am_fenrir",
+        "am_michael",
+        "am_puck",
+        "am_echo",
+        "am_eric",
+        "am_liam",
+        "am_onyx",
+        "am_santa",
+        "am_adam",
+        "bf_emma",
+        "bf_isabella",
+        "bf_alice",
+        "bf_lily",
+        "bm_george",
+        "bm_fable",
+        "bm_lewis",
+        "bm_daniel"
+      ],
+      "default": "af_heart",
+      "risk": "safe"
+    },
+    {
+      "key": "recognitionModel",
+      "env": "Speech__ModelPath",
+      "label": "Recognition model",
+      "description": "The speech recognition model file. Without it nothing said out loud is understood.",
+      "group": "models",
+      "type": "path",
+      "default": "/var/lib/kgsm-speech/models/ggml-small.en.bin",
+      "risk": "safe"
+    },
+    {
+      "key": "recognitionUseGpu",
+      "env": "Speech__UseGpu",
+      "label": "Recognise on the GPU",
+      "description": "Whether to recognise speech on the graphics card. Around forty times faster than the processor; a host without a usable card falls back on its own.",
+      "group": "models",
+      "type": "bool",
+      "default": "true",
+      "risk": "safe"
+    },
+    {
+      "key": "synthesisModel",
+      "env": "Speech__SpeechModelPath",
+      "label": "Synthesis model",
+      "description": "The speech synthesis model file. Without it surfaces answer in text only.",
+      "group": "models",
+      "type": "path",
+      "default": "/var/lib/kgsm-speech/models/kokoro.onnx",
+      "risk": "safe"
+    },
+    {
+      "key": "synthesisUseGpu",
+      "env": "Speech__SpeakUseGpu",
+      "label": "Synthesise on the GPU",
+      "description": "Whether to synthesise speech on the graphics card. Around eight times faster than the processor and worth roughly 700MB of video memory; a host without a usable card falls back on its own.",
+      "group": "models",
+      "type": "bool",
+      "default": "true",
+      "risk": "safe"
+    },
+    {
+      "key": "idleMinutes",
+      "env": "Speech__IdleMinutes",
+      "label": "Unload after",
+      "description": "How many minutes to stay loaded after the last thing said or heard. The models cost around 1.6GB of memory and a gigabyte of video memory, all of which comes back when this exits — but loading them again takes a few seconds, which the next person to speak waits for. Zero stays loaded until the host restarts.",
+      "group": "lifetime",
+      "type": "int",
+      "default": "0",
+      "min": 0,
+      "max": 1440,
+      "unit": "minutes",
+      "risk": "safe"
+    },
+    {
+      "key": "socketPath",
+      "env": "Speech__SocketPath",
+      "label": "Control socket",
+      "description": "The unix socket other services reach this one on. It has to match the socket unit, so leave it alone unless you are moving both.",
+      "group": "wiring",
+      "type": "path",
+      "default": "/run/kgsm-speech/speech.sock",
+      "risk": "wiring"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "project": "kgsm-speech",
+  "leafId": "speech",
+  "role": "leaf",
+  "runtime": {
+    "kind": "dotnet",
+    "version": "10.0",
+    "note": "Framework-dependent single-file binary. The host needs the .NET 10 runtime. Deliberately not Native-AOT: whisper.net and ONNX Runtime are heavy native interop, and the JIT startup cost is paid once per activation on a daemon that then lives for hours."
+  },
+  "privilege": {
+    "runsAsRoot": false,
+    "why": "it reads two model files and writes nothing but its log",
+    "note": "The socket's filesystem permissions (the deploying user, 0660) are the whole access boundary — every client is another service on this host running as the same account."
+  },
+  "commands": [],
+  "services": [],
+  "system": [
+    {
+      "feature": "socket-activation",
+      "required": true,
+      "probe": "systemctl --version",
+      "why": "the daemon is socket-activated and idle-exits — the .socket is what gets enabled, the .service is pulled in on demand"
+    },
+    {
+      "feature": "nvidia-gpu",
+      "required": false,
+      "probe": "nvidia-smi --query-gpu=name --format=csv,noheader",
+      "why": "recognition is around forty times faster on the card and synthesis around eight; without one, both fall back to the processor rather than refusing. cuDNN is needed for synthesis on the GPU specifically — a host with a card but no cuDNN speaks on the processor and hears on the card."
+    }
+  ],
+  "downloads": [
+    {
+      "name": "ggml-small.en.bin",
+      "size": "488MB",
+      "into": "/var/lib/kgsm-speech/models",
+      "why": "the recognition model",
+      "note": "Adopted from /var/lib/kgsm-bot/models when a host already has it from an earlier kgsm-bot install. KGSM_SPEECH_MODELS=0 skips the fetch."
+    },
+    {
+      "name": "kokoro.onnx",
+      "size": "325MB",
+      "into": "/var/lib/kgsm-speech/models",
+      "why": "the synthesis model"
+    }
+  ],
+  "units": {
+    "system": ["kgsm-speech.socket", "kgsm-speech.service"],
+    "user": [],
+    "note": "Enable the .socket, not the .service. An inactive .service is this leaf's resting state: it wakes on a connection and exits again after Speech__IdleMinutes, which is the only way its ~1.6GB and ~1.1GB of video memory are ever returned."
+  },
+  "paths": {
+    "prefix": "/opt/kgsm-speech",
+    "state": ["/var/lib/kgsm-speech"],
+    "config": ["/etc/kgsm-speech/kgsm-speech.env"],
+    "descriptor": "/var/lib/kgsm/leaves/speech.json"
+  }
+}

@@ -1,0 +1,52 @@
+[Unit]
+Description=KGSM speech engine (recognition and synthesis for every surface on this host)
+Documentation=https://github.com/TheKrystalShip
+# Socket activation handles ordering, but make the relationship explicit: this service exists to
+# serve that socket and should never be started without it.
+Requires=kgsm-speech.socket
+After=kgsm-speech.socket
+
+# On-demand activation plus idle-exit means start/exit cycles are normal — every stretch of voice
+# wakes the daemon and it unloads again afterwards. Disable systemd's start-rate limit so a run of
+# short sessions can never trip it and refuse to re-activate. (Idle-exit returns 0, so
+# Restart=on-failure never fires on it either.)
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# Runs as the deploying user: this daemon needs no privilege at all. It reads two model files and
+# writes nothing but its own log. deploy/deploy.sh rewrites User=/Group= at install time.
+User=kgsm
+Group=kgsm
+
+WorkingDirectory=/opt/kgsm-speech
+# Framework-dependent single-file binary — REQUIRES the .NET 10 runtime on the host (deploy.sh
+# checks). The models are NOT loaded at startup: this process costs a few tens of megabytes until a
+# surface says speech is about to be wanted, which is what makes socket activation worth having.
+ExecStart=/opt/kgsm-speech/kgsm-speech
+
+# The models live here, outside the install prefix, because deploy.sh syncs that prefix with
+# `rsync --delete` and these are 813MB that must survive a deploy. systemd creates the directory
+# before the daemon starts; deploy/setup.sh fetches the models into it.
+StateDirectory=kgsm-speech
+StateDirectoryMode=0755
+
+# The socket path the binary would bind if it were started by hand. It must match the .socket unit's
+# ListenStream, and under socket activation it is not consulted at all — systemd hands the listening
+# socket over as fd 3.
+Environment=Speech__SocketPath=/run/kgsm-speech/speech.sock
+
+# Optional operator overrides (Speech__Voice, Speech__IdleMinutes, Speech__UseGpu, …). The leading
+# '-' makes the file optional.
+EnvironmentFile=-/etc/kgsm-speech/kgsm-speech.env
+# Written by the Control Panel when somebody changes this leaf's configuration there. Loaded last so
+# a panel change beats the file above and the settings file beside the binary.
+EnvironmentFile=-/var/lib/kgsm-api/leaf-overrides/speech.env
+
+# ⚠ Do NOT set PrivateTmp or a strict ProtectSystem here without re-testing on the card: the CUDA
+# and cuDNN libraries this loads live outside this unit's tree, and the driver needs /dev/nvidia*.
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
