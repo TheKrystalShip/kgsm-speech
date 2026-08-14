@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-15
+
+### Fixed — the unit no longer names the Control Panel
+
+`kgsm-speech.service` referenced `/var/lib/kgsm-api/leaf-overrides/speech.env` directly. A leaf must
+never name the API — a host with no Control Panel has nothing to point at — and kgsm-api installs a
+drop-in for exactly this, which is also what makes the layering right: a drop-in is parsed after the
+unit's own directives, so a panel value wins without the unit knowing the panel exists.
+
 ## [1.0.0] - 2026-08-15
 
 ### Added — the speech leaf

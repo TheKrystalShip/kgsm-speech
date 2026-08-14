@@ -39,9 +39,11 @@ Environment=Speech__SocketPath=/run/kgsm-speech/speech.sock
 # Optional operator overrides (Speech__Voice, Speech__IdleMinutes, Speech__UseGpu, …). The leading
 # '-' makes the file optional.
 EnvironmentFile=-/etc/kgsm-speech/kgsm-speech.env
-# Written by the Control Panel when somebody changes this leaf's configuration there. Loaded last so
-# a panel change beats the file above and the settings file beside the binary.
-EnvironmentFile=-/var/lib/kgsm-api/leaf-overrides/speech.env
+
+# ⚠ The Control Panel's overrides are NOT referenced here. kgsm-api installs a drop-in
+# (50-kgsm-api-override.conf) that adds its own EnvironmentFile after this one — a leaf must never
+# name the API, and a host with no Control Panel has nothing to point at. That is also what makes the
+# layering right: a drop-in is parsed after this unit's own directives, so a panel value wins.
 
 # ⚠ Do NOT set PrivateTmp or a strict ProtectSystem here without re-testing on the card: the CUDA
 # and cuDNN libraries this loads live outside this unit's tree, and the driver needs /dev/nvidia*.
