@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-15
+
+### Added — what the recogniser is primed with, decided once for every surface
+
+`SpokenVocabulary` composes the prior context whisper is conditioned on: this host's triggers, its
+servers and the games it can install, written as sentences within a character budget. `IsEchoOf`
+catches the failure that priming introduces — given audio with nothing recognisable in it, whisper
+sometimes continues the context instead of returning nothing, which arrives looking exactly like
+somebody reading a list of server names aloud.
+
+It moves here from the Discord bot for the reason `SpokenSentences` did, and the evidence was already
+in this repo: `PrimingMeasurement` has been measuring whether priming changes the spelling that comes
+back, against a context it composed by hand because the composer lived somewhere it could not reach.
+It now measures the composer that ships. A browser sending a voice note and a voice channel carrying
+a spoken request are the same host being asked about the same servers, and a second implementation of
+which names to name is a second set of servers misheard.
+
+Surfaces keep what is theirs: where the names come from, and how often the list is re-read.
+
 ## [1.2.0] - 2026-08-15
 
 ### Added — where a reply is cut into sentences, decided once for every surface

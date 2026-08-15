@@ -4,6 +4,8 @@ using System.Text;
 using KokoroSharp;
 using KokoroSharp.Core;
 
+using TheKrystalShip.KGSM.Speech;
+
 using Whisper.net;
 using Whisper.net.LibraryLoader;
 
@@ -78,11 +80,9 @@ public class PrimingMeasurement(ITestOutputHelper output)
         RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Cuda, RuntimeLibrary.Cpu];
         using WhisperFactory factory = WhisperFactory.FromPath(ModelPath);
 
-        // Composed here rather than taken from a surface: what a caller sends as the vocabulary is
-        // its own business — kgsm-bot builds this from the servers installed on the host — and what is
-        // being measured is only whether sending one changes the spelling that comes back.
-        string context = string.Join(
-            ", ", Triggers.Concat(Instances).Concat(Blueprints)) + ".";
+        // Composed by the thing that composes it in production, so what is measured is the context a
+        // host actually sends rather than a hand-written approximation of one.
+        string context = SpokenVocabulary.Compose(Triggers, Instances, Blueprints);
         output.WriteLine($"context ({context.Length} chars): {context}");
         output.WriteLine("");
 

@@ -49,6 +49,13 @@ Deploy, like every `kgsm-*` project:
     not a lazy sequence. Fence state carries across deltas, so re-reading text already seen toggles it
     twice and starts reading the code aloud — and a caller that never enumerates an iterator consumes
     nothing at all, losing the reply with nothing to say so.
+  - **`SpokenVocabulary` is the prior context the recogniser is primed with**, for the same reason
+    and on the same terms. A recogniser knows English, not that a server here is called `Ketchup`;
+    naming the host's servers as though they were the transcript of a moment ago shifts the spelling
+    it picks. `Compose` builds that text within a character budget, and `IsEchoOf` catches the
+    failure priming introduces — whisper handing the context back as though somebody had said it.
+    A surface owns where the names come from and how often it re-reads them; it does not own how
+    they are written down.
   - ⚠ **A sentence ends at terminal punctuation *followed by whitespace*.** `kgsm.sh`, `1.2.3` and
     `ggml-small.en.bin` are full of dots; cutting at one says half a sentence and pays a synthesis
     request for it. A **fenced block is dropped**, an unclosed one swallows the rest of the answer,
