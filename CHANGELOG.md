@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-15
+
+### Added — where a reply is cut into sentences, decided once for every surface
+
+`SpokenSentences` takes a reply arriving token by token and hands back the sentences it is worth
+speaking, so the first one plays while the model is still writing the third. `SpokenSentences.Whole`
+applies the same rules to a reply that is already complete — a short line a surface writes for itself,
+or an answer that was never streamed.
+
+Where a reply is cut decides what a listener hears and when, and two surfaces answering that question
+separately answer it differently within a release. The Discord bot playing into a voice channel and
+the assistant streaming audio to a browser are the same job with different plumbing under it, so the
+rules live here, in the package both already depend on.
+
+The rules, each of which cost a failing test somewhere to find:
+
+- ⚠ **Every character is consumed exactly once.** Fence state carries across deltas, so an
+  implementation that re-reads text it has already seen toggles that state a second time and starts
+  reading the code aloud. `Take` therefore returns a finished list rather than a lazy sequence: a
+  caller that never enumerates an iterator consumes nothing at all, and the reply would go missing
+  with nothing anywhere to say so.
+- ⚠ **A sentence ends at terminal punctuation followed by whitespace**, decided one character late.
+  `kgsm.sh`, `1.2.3` and `ggml-small.en.bin` are full of dots, and cutting at one reads half a
+  sentence aloud and spends a synthesis request doing it.
+- ⚠ **A fenced block is dropped, not spoken** — it spans sentences and its "sentences" are lines of
+  syntax. A fence the reply never closes swallows the rest of it, which is correct: an answer that
+  opened a fence and stopped is a code block, whatever follows.
+- ⚠ **A fence marker counts only at the true start of a line.** A sentence ending part-way along a
+  line leaves the rest of it in a fresh buffer, and reading that as a line start takes
+  "Done. ```yaml" for a fence — silencing every word after it for the rest of the answer.
+- **A line ending is a boundary**, so a heading and a list item are each their own breath.
+- **A sentence shorter than `ShortestWorthSaying` waits for the next one**, and whatever is left is
+  said by the flush whether it terminated or not. The floor is 24 characters — low on purpose, since a
+  complete sentence of six words is the answer and holding it back trades away the latency this
+  exists to remove.
+- **Markup goes, words never do**: emphasis, code spans, table pipes, list markers, heading hashes,
+  and a link's target — which is an address, not a sentence, and whose dots would cut one in the
+  middle.
+
 ## [1.1.0] - 2026-08-15
 
 ### Added — audio in a container, for callers that cannot play raw samples

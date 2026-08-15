@@ -35,9 +35,26 @@ Deploy, like every `kgsm-*` project:
 
 ## The shape
 
-- **`src/Speech`** — `TheKrystalShip.KGSM.Speech`, the **published package**: the wire protocol and
-  the client. Every surface that speaks consumes this, so a contract break is a compile break rather
-  than a socket that goes quiet. AOT-safe (hand-rolled framing, no serializer, no reflection).
+- **`src/Speech`** — `TheKrystalShip.KGSM.Speech`, the **published package**: the wire protocol, the
+  client, and `SpokenSentences`. Every surface that speaks consumes this, so a contract break is a
+  compile break rather than a socket that goes quiet. AOT-safe (hand-rolled framing, no serializer,
+  no reflection).
+  - **`SpokenSentences` is where a reply is cut into sentences, for everybody.** It takes a reply
+    arriving token by token and hands back what is worth speaking, so the first sentence plays while
+    the model is still writing the third; `Whole` applies the same rules to a reply that is already
+    complete. It is here rather than in each surface because where a reply is cut decides what a
+    listener hears and when, and two surfaces answering that separately answer it differently within
+    a release. Pure string work — no dependency, no protocol.
+  - ⚠ **Every character is consumed exactly once**, which is why `Take` returns a finished list and
+    not a lazy sequence. Fence state carries across deltas, so re-reading text already seen toggles it
+    twice and starts reading the code aloud — and a caller that never enumerates an iterator consumes
+    nothing at all, losing the reply with nothing to say so.
+  - ⚠ **A sentence ends at terminal punctuation *followed by whitespace*.** `kgsm.sh`, `1.2.3` and
+    `ggml-small.en.bin` are full of dots; cutting at one says half a sentence and pays a synthesis
+    request for it. A **fenced block is dropped**, an unclosed one swallows the rest of the answer,
+    and a fence marker counts **only at the true start of a line** — a sentence ending mid-line leaves
+    the rest of it in a fresh buffer, and reading that as a line start takes "Done. \`\`\`yaml" for a
+    fence and silences everything after it.
 - **`src/Daemon`** — `kgsm-speech`, the binary: the socket server plus `SpeechRecogniser` (whisper)
   and `SpeechSynthesiser` (kokoro).
 
