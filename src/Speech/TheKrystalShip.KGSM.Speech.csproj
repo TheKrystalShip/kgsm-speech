@@ -19,7 +19,7 @@
     <PackageId>TheKrystalShip.KGSM.Speech</PackageId>
     <!-- Bump on ANY change to the framing or the message set; NuGet caches by id+version, so a
          same-version repack serves a stale dll to a consumer. -->
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <Authors>Heisenberg</Authors>
     <Description>Client and wire contract for the kgsm-speech daemon: speech recognition and synthesis over a unix socket, shared by every KGSM surface that listens or speaks.</Description>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>

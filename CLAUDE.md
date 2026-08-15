@@ -62,8 +62,17 @@ Deploy, like every `kgsm-*` project:
     and a fence marker counts **only at the true start of a line** — a sentence ending mid-line leaves
     the rest of it in a fresh buffer, and reading that as a line start takes "Done. \`\`\`yaml" for a
     fence and silences everything after it.
+  - **`SpeechStatus` is everything the daemon can say about itself**, measured: which runtime each
+    half actually loaded on, the voice being spoken in beside the configured one, when the models
+    unload, which processes are attached, and per-lane tallies of what has been heard and said.
+    Written as `key=value` lines rather than fixed offsets like the rest of the protocol — this one
+    grows, and a reader that skips a key it does not know keeps working against a newer daemon.
+    Never a transcript and never the spoken text: what somebody says into a microphone belongs to
+    the surface that asked for it.
 - **`src/Daemon`** — `kgsm-speech`, the binary: the socket server plus `SpeechRecogniser` (whisper)
-  and `SpeechSynthesiser` (kokoro).
+  and `SpeechSynthesiser` (kokoro). `LaneTally` holds each half's counters for the life of the
+  process — the durations as a fixed ring of the most recent passes, because a mean over an hour
+  describes a machine nobody is waiting on.
 
 ## Invariants
 
@@ -71,6 +80,15 @@ Deploy, like every `kgsm-*` project:
   travels with each sentence, or is omitted to mean "this host's voice". A client that reconnects
   after an idle-exit is answered exactly as one that never left — which is what makes the idle-exit
   invisible and the client's reconnect logic trivial.
+- ⚠ **Asking for a status is the one message that does not count as being asked.** Everything else on
+  this wire is somebody using the daemon and pushes the idle deadline out; a panel watching it is not,
+  and counting it would hold the models resident for as long as anybody had the page open. Connecting
+  still starts the daemon — that is systemd's socket doing its job — so a surface reports on this leaf
+  when somebody is looking, never on a timer.
+- **What loaded is reported, not what was asked for.** Whisper takes the first runtime that
+  initialises and Kokoro falls back when cuDNN is absent, so a host that asked for the card and did
+  not get it recognises forty times slower and synthesises eight times slower. Both halves carry the
+  runtime they actually opened on, and `unknown` stays `unknown`.
 - **The models load on demand, never at startup.** Starting is cheap, so systemd can activate this for
   a question as small as `--voices`. What loads them is `Wake` (a surface saying speech is about to be
   wanted) or the first real request.

@@ -198,6 +198,32 @@ public sealed class SpeechClient : IDisposable, IAsyncDisposable
         ListAsync(SpeechProtocol.Kind.Voices, SpeechProtocol.Voices, ct);
 
     /// <summary>
+    /// What the daemon is doing right now. Null when this host has none, or it would not answer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠ <b>Asking starts the daemon</b>, as every call here does — the socket is systemd's and
+    /// connecting to it is the trigger. It loads no model, so the process it starts is a small one,
+    /// but a caller that asks on a timer is a caller that keeps one running. Ask when somebody is
+    /// looking.
+    /// </para>
+    /// <para>
+    /// <b>It does not push the idle deadline out.</b> The daemon deliberately excludes this message
+    /// from what counts as being used, so watching it never keeps it alive.
+    /// </para>
+    /// </remarks>
+    public async Task<SpeechStatus?> StatusAsync(CancellationToken ct = default)
+    {
+        (SpeechProtocol.Outcome outcome, byte[] payload) = await AskAsync(
+            SpeechProtocol.Kind.Status, SpeechProtocol.Status, AnswerWithin, ct).ConfigureAwait(false);
+
+        if (outcome != SpeechProtocol.Outcome.Done) return null;
+
+        (_, string report) = SpeechProtocol.ReadReported(payload);
+        return report.Length == 0 ? null : SpeechStatus.Parse(report);
+    }
+
+    /// <summary>
     /// Speaks in <paramref name="voice"/> from the next sentence on, <b>on every surface this host has</b>.
     /// </summary>
     /// <remarks>

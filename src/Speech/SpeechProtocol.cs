@@ -80,6 +80,20 @@ public static class SpeechProtocol
         /// rather than refused. A caller that wants PCM keeps sending the shorthand forever.
         /// </remarks>
         SynthesizeAs = 10,
+
+        /// <summary>
+        /// What this daemon is doing right now — for a surface reporting on it rather than using it.
+        /// </summary>
+        /// <remarks>
+        /// ⚠ <b>The one message that does not count as being asked.</b> Everything else here pushes the
+        /// idle deadline out, because everything else is somebody using this. A panel polling for a
+        /// status is not, and treating it as such would hold 1.6GB of models resident for as long as
+        /// anybody had the page open.
+        /// </remarks>
+        Status = 11,
+
+        /// <summary>The answer to <see cref="Status"/>.</summary>
+        Reported = 12,
     }
 
     /// <summary>
@@ -298,6 +312,30 @@ public static class SpeechProtocol
         (IdOf(payload), (Outcome)payload[4], payload[5..]);
 
     public static byte[] Voices(uint id) => BitConverter.GetBytes(id);
+
+    public static byte[] Status(uint id) => BitConverter.GetBytes(id);
+
+    /// <summary>
+    /// The daemon's own account of itself, as <see cref="SpeechStatus"/>'s <c>key=value</c> text.
+    /// </summary>
+    /// <remarks>
+    /// Text rather than offsets, unlike everything else here: this one carries thirty-odd fields that
+    /// grow, and a reader that skips a key it does not know keeps working against a daemon newer than
+    /// itself — which a fixed layout cannot do.
+    /// </remarks>
+    public static byte[] Reported(uint id, string report)
+    {
+        byte[] text = Encoding.UTF8.GetBytes(report);
+        byte[] payload = new byte[4 + text.Length];
+
+        BitConverter.TryWriteBytes(payload.AsSpan(0, 4), id);
+        text.CopyTo(payload, 4);
+
+        return payload;
+    }
+
+    public static (uint Id, string Report) ReadReported(byte[] payload) =>
+        (IdOf(payload), Encoding.UTF8.GetString(payload, 4, payload.Length - 4));
 
     public static byte[] SpeakAs(uint id, string voice)
     {

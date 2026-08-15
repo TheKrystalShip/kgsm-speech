@@ -77,15 +77,19 @@ internal sealed class SpeechSynthesiser : IDisposable
     /// exactly one, at about half a megabyte.
     /// </remarks>
     private readonly ConcurrentDictionary<string, KokoroVoice> _loaded = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LaneTally _tally = new();
+    private readonly string _modelPath;
 
     private bool _disposed;
 
     public SpeechSynthesiser(string modelPath, bool useGpu, string warmVoice, ILogger logger)
     {
         _logger = logger;
+        _modelPath = modelPath ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath))
         {
+            Detail = $"no model at '{modelPath}'";
             _logger.LogError(
                 "Speech: no synthesis model at '{Model}' — surfaces will answer in text and not out "
                 + "loud. Run deploy/setup.sh to fetch it, or set Speech:SpeechModelPath.",
@@ -99,20 +103,54 @@ internal sealed class SpeechSynthesiser : IDisposable
             (_synth, string runtime) = Load(modelPath, useGpu);
             timer.Stop();
 
+            Runtime = runtime;
+            Detail = $"{Path.GetFileName(modelPath)} on the {runtime.ToUpperInvariant()}";
+
             _logger.LogInformation(
                 "Speech: synthesis ready — on the {Runtime}, loaded in {Elapsed}ms",
-                runtime, timer.ElapsedMilliseconds);
+                runtime.ToUpperInvariant(), timer.ElapsedMilliseconds);
 
             Warm(warmVoice);
         }
         catch (Exception ex)
         {
+            Detail = ex.Message;
             _logger.LogError(ex, "Speech: could not load synthesis ({Model}) — answers stay in text", modelPath);
             _synth = null;
         }
     }
 
     public bool IsAvailable => _synth is not null;
+
+    /// <summary>
+    /// Which runtime the model opened on — <c>gpu</c> or <c>cpu</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <b>Not the setting that asked for one.</b> The CUDA path needs cuDNN, which plenty of hosts do
+    /// not have, and falling back to the processor is eight times slower and otherwise invisible.
+    /// </remarks>
+    public string Runtime { get; private set; } = "unknown";
+
+    /// <summary>What this lane is doing, or the reason it can do nothing.</summary>
+    public string Detail { get; private set; } = string.Empty;
+
+    /// <summary>How synthesis has been getting on since this process started.</summary>
+    public SpeechLane Reported() => _tally.Reported(
+        IsAvailable, Detail, Path.GetFileName(_modelPath), Bytes(_modelPath), Runtime);
+
+    /// <summary>The model file's size, or zero when there is nothing there to measure.</summary>
+    private static long Bytes(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            return file.Exists ? file.Length : 0;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
 
     /// <summary>
     /// Opens the model on the card when asked, and on the processor when the card cannot be had.
@@ -130,7 +168,7 @@ internal sealed class SpeechSynthesiser : IDisposable
             try
             {
                 var cuda = Microsoft.ML.OnnxRuntime.SessionOptions.MakeSessionOptionWithCudaProvider(0);
-                return (KokoroWavSynthesizer.LoadModel(model, cuda), "GPU");
+                return (KokoroWavSynthesizer.LoadModel(model, cuda), "gpu");
             }
             catch (Exception ex)
             {
@@ -140,7 +178,7 @@ internal sealed class SpeechSynthesiser : IDisposable
             }
         }
 
-        return (KokoroWavSynthesizer.LoadModel(model), "CPU");
+        return (KokoroWavSynthesizer.LoadModel(model), "cpu");
     }
 
     /// <summary>
@@ -197,30 +235,44 @@ internal sealed class SpeechSynthesiser : IDisposable
             return (SpeechProtocol.Outcome.Unavailable, []);
         }
 
-        await _one.WaitAsync(ct);
+        _tally.Queued();
         try
         {
-            var timer = Stopwatch.StartNew();
+            await _one.WaitAsync(ct);
+        }
+        finally
+        {
+            _tally.Dequeued();
+        }
 
+        var timer = Stopwatch.StartNew();
+        _tally.Started();
+        try
+        {
             // Synthesis is a blocking ONNX call, and this daemon's only other job is hearing: reading the
             // next sentence is happening on another thread and must not wait behind it.
             byte[] mono24k = await Task.Run(() => _synth.Synthesize(text, voice), ct);
 
             timer.Stop();
+            double seconds = mono24k.Length / (24000.0 * 2);
+
+            _tally.Finished(SpeechProtocol.Outcome.Done, (int)timer.ElapsedMilliseconds, seconds, text.Length);
             _logger.LogDebug(
                 "Speech: synthesised {Characters} characters into {Seconds:F1}s of audio in {Elapsed}ms",
-                text.Length, mono24k.Length / (24000.0 * 2), timer.ElapsedMilliseconds);
+                text.Length, seconds, timer.ElapsedMilliseconds);
 
             return (SpeechProtocol.Outcome.Done, mono24k);
         }
         catch (OperationCanceledException)
         {
+            _tally.Finished(SpeechProtocol.Outcome.Failed, (int)timer.ElapsedMilliseconds);
             return (SpeechProtocol.Outcome.Failed, []);
         }
         catch (Exception ex)
         {
             // Failing to say an answer out loud is not failing to answer: the text is already in the
             // channel, and the voice connection stays up for the next question.
+            _tally.Finished(SpeechProtocol.Outcome.Failed, (int)timer.ElapsedMilliseconds);
             _logger.LogWarning(ex, "Speech: could not synthesise a reply — it stands in text only");
             return (SpeechProtocol.Outcome.Failed, []);
         }

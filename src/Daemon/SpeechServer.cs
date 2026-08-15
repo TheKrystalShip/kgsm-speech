@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Sockets;
 
@@ -31,10 +32,24 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
 {
     private readonly SemaphoreSlim _loading = new(1, 1);
 
+    /// <summary>
+    /// The surfaces connected right now, by the name of the process on the other end.
+    /// </summary>
+    /// <remarks>
+    /// Not per-client state in the sense this daemon refuses to hold: nothing here is consulted to
+    /// answer a request, and a surface that reconnects is answered exactly as one that never left.
+    /// It is the connection list the kernel already has, kept in a form that can be reported.
+    /// </remarks>
+    private readonly ConcurrentDictionary<long, string> _surfaces = new();
+    private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
+
+    private long _nextSurface;
     private SpeechRecogniser? _ears;
     private SpeechSynthesiser? _mouth;
     private string _voice = options.Voice;
     private DateTimeOffset _lastAsked = DateTimeOffset.UtcNow;
+    private DateTimeOffset? _loadedAt;
+    private int _loadMilliseconds;
 
     /// <summary>Accepts surfaces until the host stops this, or until nobody has asked for long enough.</summary>
     public async Task RunAsync(CancellationToken ct)
@@ -84,6 +99,9 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
         await using var stream = new NetworkStream(surface, ownsSocket: true);
         var writing = new SemaphoreSlim(1, 1);
 
+        long attached = Interlocked.Increment(ref _nextSurface);
+        _surfaces[attached] = Attached(surface);
+
         try
         {
             while (true)
@@ -108,7 +126,44 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
         }
         finally
         {
+            _surfaces.TryRemove(attached, out _);
             writing.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The name of the process on the other end of a connection.
+    /// </summary>
+    /// <remarks>
+    /// From the credentials the kernel attaches to the socket, so it is what is really there rather
+    /// than what said it was — nothing on this wire identifies itself and nothing should have to.
+    /// A process that has already gone, or a kernel that will not say, both come back as
+    /// <c>a surface</c>: naming it something more specific would be inventing the answer.
+    /// </remarks>
+    private static string Attached(Socket surface)
+    {
+        // SOL_SOCKET and SO_PEERCRED as the kernel numbers them. Read raw rather than through a named
+        // socket option: the framework's table has no name for this one, and asking by name comes back
+        // as a zeroed buffer that reads like a process with no pid.
+        const int SolSocket = 1;
+        const int SoPeerCred = 17;
+        const string Unknown = "a surface";
+
+        try
+        {
+            // struct ucred — pid, uid, gid, four bytes each.
+            Span<byte> credentials = stackalloc byte[12];
+            if (surface.GetRawSocketOption(SolSocket, SoPeerCred, credentials) < 4) return Unknown;
+
+            int pid = BitConverter.ToInt32(credentials[..4]);
+            if (pid <= 0) return Unknown;
+
+            string comm = File.ReadAllText($"/proc/{pid}/comm").Trim();
+            return comm.Length == 0 ? Unknown : comm;
+        }
+        catch (Exception)
+        {
+            return Unknown;
         }
     }
 
@@ -117,7 +172,11 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
     {
         try
         {
-            _lastAsked = DateTimeOffset.UtcNow;
+            // ⚠ Everything except a status report counts as somebody using this daemon and pushes the
+            // idle deadline out. A status report deliberately does not: a panel watching this would
+            // otherwise hold the models resident for as long as anybody had the page open, which is
+            // precisely the 1.6GB the idle-exit exists to give back.
+            if (kind != SpeechProtocol.Kind.Status) _lastAsked = DateTimeOffset.UtcNow;
 
             switch (kind)
             {
@@ -173,6 +232,17 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
                     await SendAsync(stream, writing, SpeechProtocol.Kind.VoiceList,
                         SpeechProtocol.VoiceList(
                             id, SpeechProtocol.Outcome.Done, _voice, InstalledVoices.Offered()), ct);
+                    break;
+                }
+
+                case SpeechProtocol.Kind.Status:
+                {
+                    // Answered from what is already in hand — no model is loaded to report on one, so
+                    // asking a resting daemon how it is leaves it resting.
+                    uint id = SpeechProtocol.IdOf(payload);
+
+                    await SendAsync(stream, writing, SpeechProtocol.Kind.Reported,
+                        SpeechProtocol.Reported(id, Reported().ToText()), ct);
                     break;
                 }
 
@@ -279,6 +349,8 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
 
             _mouth = mouth;
             _ears = ears;
+            _loadMilliseconds = (int)timer.ElapsedMilliseconds;
+            _loadedAt = DateTimeOffset.UtcNow;
 
             logger.LogInformation(
                 "Speech: loaded in {Elapsed}ms — {Hearing}, {Speaking}", timer.ElapsedMilliseconds,
@@ -324,9 +396,76 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
         }
     }
 
-    private string Describe() =>
-        $"{Path.GetFileName(options.ModelPath)} on the {(options.UseGpu ? "GPU" : "CPU")}, "
-        + $"speaking as {_voice} on the {(options.SpeakUseGpu ? "GPU" : "CPU")}";
+    /// <summary>
+    /// What this daemon turned out to be, in one line.
+    /// </summary>
+    /// <remarks>
+    /// Composed from what the two halves actually loaded rather than from the settings that asked
+    /// them to. Both fall back to the processor when the card cannot be had, and a line assembled
+    /// from the configuration would report a GPU that was never used.
+    /// </remarks>
+    private string Describe()
+    {
+        string hearing = _ears?.Detail is { Length: > 0 } ears ? ears : "not loaded";
+        string speaking = _mouth?.Detail is { Length: > 0 } mouth ? mouth : "not loaded";
+
+        return $"hearing {hearing}, speaking as {_voice} with {speaking}";
+    }
+
+    /// <summary>
+    /// Everything this daemon can say about itself, measured.
+    /// </summary>
+    /// <remarks>
+    /// The unload time is arithmetic over the last real request, so it moves as this is used and is
+    /// absent altogether on a host configured to stay loaded. Nothing here is derived from what the
+    /// configuration asks for: a model that fell back to the processor says so, and the voice being
+    /// spoken in is the one in use rather than the one on file.
+    /// </remarks>
+    private SpeechStatus Reported() => new()
+    {
+        StartedAt = _startedAt,
+        Loaded = _ears is not null,
+        LoadedAt = _loadedAt,
+        LoadMilliseconds = _loadedAt is null ? null : _loadMilliseconds,
+        IdleMinutes = options.IdleMinutes,
+        LastAskedAt = _lastAsked,
+        UnloadsAt = options.IdleMinutes > 0
+            ? _lastAsked.AddMinutes(options.IdleMinutes)
+            : null,
+        Surfaces = [.. _surfaces.Values.Order(StringComparer.Ordinal)],
+        SpeakingVoice = _voice,
+        ConfiguredVoice = options.Voice,
+        InstalledVoices = InstalledVoices.All().Count(),
+        // A lane that has not been loaded still knows its model path, so the file it is waiting on can
+        // be reported as present or missing before anything has needed it.
+        Hearing = _ears?.Reported() ?? Waiting(options.ModelPath),
+        Speaking = _mouth?.Reported() ?? Waiting(options.SpeechModelPath),
+    };
+
+    /// <summary>A lane that has not been loaded: the model file it will use, and nothing invented.</summary>
+    private static SpeechLane Waiting(string modelPath)
+    {
+        long bytes = 0;
+        try
+        {
+            var file = new FileInfo(modelPath);
+            bytes = file.Exists ? file.Length : 0;
+        }
+        catch (Exception)
+        {
+            // An unreadable path is reported as a model of unknown size rather than as one absent:
+            // this daemon has not tried to load it yet and does not know which it is.
+        }
+
+        return new SpeechLane
+        {
+            Available = false,
+            Detail = bytes > 0 ? "not loaded yet" : $"no model at '{modelPath}'",
+            Model = Path.GetFileName(modelPath),
+            ModelBytes = bytes,
+            Runtime = "unknown",
+        };
+    }
 
     /// <summary>
     /// Writes one message, one at a time.

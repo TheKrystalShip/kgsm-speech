@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-15
+
+### Added — the daemon reports on itself
+
+A `Status` message, answered with everything this daemon can measure about itself: whether the models
+are loaded and how long loading took, which runtime each half actually opened on, the voice being
+spoken in beside the one configured, when the models unload if nothing else is asked, which processes
+are attached, and per-lane tallies of what has been heard and said since the process started —
+counts, seconds of audio, mean and p95 pass durations, and how each lane's last pass went. No
+transcript and no spoken text: what somebody says into a microphone belongs to the surface that asked
+for it.
+
+`SpeechClient.StatusAsync` reads it, and `TheKrystalShip.KGSM.Speech` moves to **1.4.0** for the two
+new message kinds. The payload is `key=value` lines rather than fixed offsets, because this one grows
+— a reader skips a key it does not know and keeps every one it does.
+
+⚠ **Asking for a status is the one message that does not push the idle deadline out.** Everything else
+on this wire is somebody using the daemon; a panel watching it is not, and counting it would hold
+1.6GB of models resident for as long as anybody had the page open.
+
+### Changed — what loaded, not what was asked for
+
+Both halves report the runtime they actually opened on. Whisper takes the first runtime that
+initialises and Kokoro falls back when cuDNN is absent, so a host that asked for the card and did not
+get it recognises forty times slower and synthesises eight times slower — a difference that was
+otherwise invisible. The `Ready` message's detail line is composed the same way, from what the two
+halves loaded rather than from the settings that asked them to.
+
 ## [1.4.0] - 2026-08-15
 
 ### Added — this leaf is a package
