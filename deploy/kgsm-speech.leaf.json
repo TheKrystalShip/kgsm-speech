@@ -94,6 +94,19 @@
       "risk": "safe"
     },
     {
+      "key": "speechRate",
+      "env": "Speech__SpeechRate",
+      "label": "Speaking rate",
+      "description": "How fast this host speaks, against the voice's natural pace. 100 is the pace the voice was trained at; higher is faster. Worth moving in small steps and listening — the voices stay natural a little way either side of 100 and start to sound wrong well before the ends of this range.",
+      "group": "voice",
+      "type": "int",
+      "default": "100",
+      "min": 50,
+      "max": 200,
+      "unit": "%",
+      "risk": "safe"
+    },
+    {
       "key": "recognitionModel",
       "env": "Speech__ModelPath",
       "label": "Recognition model",

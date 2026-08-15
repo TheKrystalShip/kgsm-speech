@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-15
+
+### Added — this host's speaking rate is a setting
+
+`Speech:SpeechRate` is how fast this host speaks, as a percentage of the voice's natural pace: 100 is
+the pace the voice was trained at, and the Control Panel offers 50 to 200. Kokoro takes a float
+multiplier and this is divided by a hundred on the way in; the two bounds are one pair of constants,
+declared to the panel and applied as the daemon's own clamp, so a slider cannot ask for a rate the
+synthesiser will not honour and a hand-edited env file cannot ask for zero.
+
+It belongs to the host for the same reason the voice does — every surface asks this daemon, so one
+setting changes how the assistant sounds in Discord and in a browser at once. Rate costs nothing:
+synthesis is priced per character, and a faster reading is the same characters in less audio.
+
 ## [1.5.0] - 2026-08-15
 
 ### Added — the daemon reports on itself

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 using KokoroSharp;
 using KokoroSharp.Core;
+using KokoroSharp.Processing;
 
 using Microsoft.Extensions.Logging;
 
@@ -80,12 +81,33 @@ internal sealed class SpeechSynthesiser : IDisposable
     private readonly LaneTally _tally = new();
     private readonly string _modelPath;
 
+    /// <summary>
+    /// The pipeline Kokoro is asked to run, carrying this host's speaking rate.
+    /// </summary>
+    /// <remarks>
+    /// Built once and handed to every call: it is configuration rather than per-request state, and a
+    /// fresh one per sentence would rebuild the segmentation delegate for nothing. Everything except
+    /// the rate is left exactly as Kokoro defaults it.
+    /// </remarks>
+    private readonly KokoroTTSPipelineConfig _pipeline;
+
     private bool _disposed;
 
-    public SpeechSynthesiser(string modelPath, bool useGpu, string warmVoice, ILogger logger)
+    public SpeechSynthesiser(string modelPath, bool useGpu, string warmVoice, int rate, ILogger logger)
     {
         _logger = logger;
         _modelPath = modelPath ?? string.Empty;
+
+        // Clamped against the same two constants the descriptor declares as the slider's bounds, so a
+        // value that arrived some other way — a hand-edited env file — cannot ask for a pace that
+        // makes the voice unintelligible or, at zero, produces nothing at all.
+        int clamped = Math.Clamp(rate, SpeechOptions.SlowestRate, SpeechOptions.FastestRate);
+        if (clamped != rate)
+            _logger.LogWarning(
+                "Speech: a speaking rate of {Asked}% is outside {Slowest}-{Fastest}% and has been read "
+                + "as {Used}%", rate, SpeechOptions.SlowestRate, SpeechOptions.FastestRate, clamped);
+
+        _pipeline = new KokoroTTSPipelineConfig { Speed = clamped / 100f };
 
         if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath))
         {
@@ -251,7 +273,7 @@ internal sealed class SpeechSynthesiser : IDisposable
         {
             // Synthesis is a blocking ONNX call, and this daemon's only other job is hearing: reading the
             // next sentence is happening on another thread and must not wait behind it.
-            byte[] mono24k = await Task.Run(() => _synth.Synthesize(text, voice), ct);
+            byte[] mono24k = await Task.Run(() => _synth.Synthesize(text, voice, _pipeline), ct);
 
             timer.Stop();
             double seconds = mono24k.Length / (24000.0 * 2);

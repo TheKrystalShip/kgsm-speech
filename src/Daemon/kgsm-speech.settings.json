@@ -16,6 +16,12 @@
     // "this host's voice" rather than naming one, so there is nothing to keep in step.
     "Voice": "af_heart",
 
+    // How fast this host speaks, against the voice's natural pace. 100 is the pace the voice was
+    // trained at; higher is faster. Clamped to 50-200, which are also the bounds the Control Panel
+    // offers. The voices stay natural a little way either side of 100 and start to sound wrong well
+    // before the ends of that range, so move it in small steps and listen.
+    "SpeechRate": 100,
+
     // How long to stay loaded with nothing to say. Zero stays. Ending the process is the only thing
     // that returns the 1.6GB and the gigabyte of video memory the models cost — unloading inside a
     // running process does not, because the CUDA runtime behind them is resident for the life of the

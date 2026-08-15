@@ -76,6 +76,41 @@ public class SpeechOptions
     ])]
     public string Voice { get; set; } = "af_heart";
 
+    /// <summary>The slowest this host will speak, as a percentage of Kokoro's natural pace.</summary>
+    public const int SlowestRate = 50;
+
+    /// <summary>The fastest this host will speak, as a percentage of Kokoro's natural pace.</summary>
+    public const int FastestRate = 200;
+
+    /// <summary>
+    /// How fast this host speaks, as a percentage of the voice's natural pace.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A percentage rather than Kokoro's own multiplier</b>, because the panel's bounds are whole
+    /// numbers: 100 is the pace the voice was trained at, and <see cref="SlowestRate"/> and
+    /// <see cref="FastestRate"/> are both the declared bounds and the clamp the daemon applies, so the
+    /// slider cannot ask for a rate the synthesiser will not honour. Kokoro takes it as a float, and
+    /// this is divided by a hundred on the way in.
+    /// </para>
+    /// <para>
+    /// <b>It belongs to the host for the same reason the voice does.</b> Every surface asks this daemon,
+    /// so one setting changes how the assistant sounds in Discord and in a browser at once, and there is
+    /// nothing to keep in step.
+    /// </para>
+    /// <para>
+    /// Rate does not change what synthesis costs — the work is per character, and a faster reading is
+    /// the same characters in less audio.
+    /// </para>
+    /// </remarks>
+    /// <panel>How fast this host speaks, against the voice's natural pace. 100 is the pace the voice
+    /// was trained at; higher is faster. Worth moving in small steps and listening — the voices stay
+    /// natural a little way either side of 100 and start to sound wrong well before the ends of this
+    /// range.</panel>
+    [LeafField("speechRate", "Speaking rate", Group = "voice", Type = LeafType.Int, Unit = "%",
+        Min = SlowestRate, Max = FastestRate)]
+    public int SpeechRate { get; set; } = 100;
+
     /// <summary>
     /// How long to stay loaded with nothing to say. Zero stays.
     /// </summary>

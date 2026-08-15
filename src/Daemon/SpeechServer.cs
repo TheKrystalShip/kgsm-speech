@@ -344,7 +344,8 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
 
             var timer = Stopwatch.StartNew();
             var ears = new SpeechRecogniser(options.ModelPath, options.UseGpu, logger);
-            SpeechSynthesiser mouth = new(options.SpeechModelPath, options.SpeakUseGpu, _voice, logger);
+            SpeechSynthesiser mouth = new(
+                options.SpeechModelPath, options.SpeakUseGpu, _voice, options.SpeechRate, logger);
             timer.Stop();
 
             _mouth = mouth;

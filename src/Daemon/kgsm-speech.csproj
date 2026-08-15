@@ -8,7 +8,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>TheKrystalShip.KGSM.Speech.Daemon</RootNamespace>
     <AssemblyName>kgsm-speech</AssemblyName>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
 
     <!-- Framework-dependent single-file deploy: the host has the .NET 10 runtime, so it is not
          bundled. The RID is supplied at publish time (deploy/deploy.sh passes -r linux-x64). -->
