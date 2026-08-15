@@ -105,14 +105,28 @@ Deploy, like every `kgsm-*` project:
   proves the socket is bound, that connecting activates the daemon, and that the daemon reads its
   configuration and answers. `systemctl is-active` on an on-demand unit proves none of that.
 - **The models live in `/var/lib/kgsm-speech/models`** (the unit's `StateDirectory`), outside the
-  install prefix because `deploy.sh` syncs that with `rsync --delete`. `setup.sh` **adopts**
-  `/var/lib/kgsm-bot/models` when a host has them from an earlier kgsm-bot install rather than
-  re-downloading 813MB.
+  install prefix because `deploy.sh` syncs that with `rsync --delete`. What they are — names, URLs,
+  digests — is declared once in **`deploy/fetch-models.sh`**, which **adopts** `/var/lib/kgsm-bot/models`
+  when a host has them from an earlier kgsm-bot install rather than re-downloading 813MB. `setup.sh`
+  runs it here; the package installs it as `/usr/bin/kgsm-speech-fetch-models` for a node with no
+  `deploy/` directory. Never write a second copy of a digest.
+- **A publish carries only the natives this RID can load.** `Whisper.net.Runtime` emits every
+  architecture it builds for regardless of `-r`; the `DropForeignWhisperNatives` target keeps
+  `runtimes/<rid>` and `runtimes/cuda/<rid>` and drops the rest. Whisper probes both of those and
+  prefers the CUDA one, so nothing it can reach is missing.
+- **The package is `packaging/PKGBUILD`**, built by `.github/workflows/release.yml` on a `v*` tag and
+  aggregated into the fleet repository by `tks/scripts/publish-repo.sh --from-releases`. The workflow
+  is **generated** — edit `tks/scripts/ci-template/` and re-run `vendor-ci.sh`, never the copy here.
+  The 813MB of models is deliberately not in it.
 
 ## Version tracking
 
 - **Version source:** `<Version>` in `src/Daemon/kgsm-speech.csproj`, read by `deploy/version.sh`.
-  The package in `src/Speech` versions independently — bump it on **any** change to the framing or
-  the message set, because NuGet caches by id+version and a same-version repack serves a stale dll to
-  a consumer.
+  That is this repo's **release line**: the number `CHANGELOG.md` headings carry, the number a `v*`
+  tag must match, and the number the pacman package ships. `--pkgver` prints the pacman-safe form.
+  A package never restates a version; it asks for one.
+- **`TheKrystalShip.KGSM.Speech` in `src/Speech` versions independently** — bump it on **any** change
+  to the framing or the message set, because NuGet caches by id+version and a same-version repack
+  serves a stale dll to a consumer. It is not the release line: a CHANGELOG entry names it when it
+  moves rather than numbering the heading with it.
 - Bump for any user-facing change; update `CHANGELOG.md` in the same commit.

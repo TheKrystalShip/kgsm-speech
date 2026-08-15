@@ -485,3 +485,10 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# makepkg's working directories and output. The package is 365MB — the models are excluded from it,
+# but the whisper and ONNX natives are not, and a stray `git add packaging/` would commit it.
+packaging/pkg/
+packaging/src/
+packaging/*.pkg.tar.zst
+packaging/*.pkg.tar.zst.sig

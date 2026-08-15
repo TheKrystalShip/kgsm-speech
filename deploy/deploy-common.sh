@@ -54,21 +54,12 @@ ENV_EXAMPLE="${REPO_DIR}/deploy/${PROJECT}.env.example"
 HEALTH_TRIES="${HEALTH_TRIES:-30}"
 
 # ── The models ────────────────────────────────────────────────────────────────
-# The unit's StateDirectory, which systemd creates owned by User= before ExecStart.
+# The unit's StateDirectory, which systemd creates owned by User= before ExecStart. What the models
+# ARE — their names, URLs and digests — is declared once in deploy/fetch-models.sh, which a package
+# installs as /usr/bin/kgsm-speech-fetch-models so a node with no deploy/ directory gets the same
+# bytes from the same place.
 MODEL_DIR="/var/lib/${PROJECT}/models"
-
-# Where kgsm-bot used to keep them. A host that has been running the bot's own speech already has
-# both files here, and moving them is the difference between a deploy that takes a minute and one
-# that downloads 813MB it already has.
-ADOPT_FROM_DIR="/var/lib/kgsm-bot/models"
-
-RECOGNITION_MODEL_NAME="ggml-small.en.bin"
-RECOGNITION_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${RECOGNITION_MODEL_NAME}"
-RECOGNITION_MODEL_SHA256="c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d"
-
-SYNTHESIS_MODEL_NAME="kokoro.onnx"
-SYNTHESIS_MODEL_URL="https://github.com/Lyrcaxis/KokoroSharpBinaries/releases/download/v2.0.0/${SYNTHESIS_MODEL_NAME}"
-SYNTHESIS_MODEL_SHA256="0cfd5e79aab70a3d8c1a57dc639835110ddb32c9f5ff4fdd1f4db202ea43bb05"
+FETCH_MODELS="${REPO_DIR}/deploy/fetch-models.sh"
 
 # This project's leaf config descriptor — the JSON declaring its full configurable surface, which
 # kgsm-api reads to render the Control Panel's config page for this leaf. setup.sh creates the
@@ -106,82 +97,18 @@ health_probe() {
 # Anything else one-shot and privileged this project needs provisioned. setup.sh calls it once
 # the units are live; deploy.sh never does. Keep it idempotent — setup.sh is re-runnable. Use
 # "$SUDO" for privileged steps. Default: nothing to do.
-# The two models this leaf is for — one to hear with, one to speak with. They live outside the
-# install prefix (deploy.sh syncs that with `rsync --delete`) in the unit's StateDirectory, which
-# systemd creates owned by User= before ExecStart. Together they are 813MB, so a host that already
-# has them from an earlier kgsm-bot install adopts those rather than fetching them again.
-# KGSM_SPEECH_MODELS=0 skips both; re-running this script after setting it to 1 fetches them.
+# The two models this leaf is for — one to hear with, one to speak with. Together they are 813MB, so
+# a host that already has them from an earlier kgsm-bot install adopts those rather than fetching
+# them again. KGSM_SPEECH_MODELS=0 skips both; re-running this script after setting it to 1 fetches
+# them.
+#
+# The directory is created here rather than in fetch-models.sh, because only setup.sh knows which
+# account this host deploys as — the fetcher runs on a node as root and gives it to `kgsm`.
 setup_project_extras() {
-    [[ "${KGSM_SPEECH_MODELS:-1}" == "0" ]] && {
-        log "skipping the models (KGSM_SPEECH_MODELS=0) — this host will neither hear nor speak"
-        return 0
-    }
-
     install -d -m 0755 "$MODEL_DIR" 2> /dev/null ||
         $SUDO install -d -m 0755 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" "$MODEL_DIR"
 
-    adopt_model "$RECOGNITION_MODEL_NAME"
-    adopt_model "$SYNTHESIS_MODEL_NAME"
-
-    fetch_model "hearing"  "$RECOGNITION_MODEL_NAME" "$RECOGNITION_MODEL_URL" "$RECOGNITION_MODEL_SHA256" "488MB"
-    fetch_model "speaking" "$SYNTHESIS_MODEL_NAME"   "$SYNTHESIS_MODEL_URL"   "$SYNTHESIS_MODEL_SHA256"   "325MB"
-}
-
-# Take over a model an earlier kgsm-bot install fetched, rather than downloading it again. Both
-# directories belong to this user, so the move needs no privilege — and it is a move, not a copy,
-# because two 488MB files that must stay identical is a trap and the bot no longer reads its own.
-adopt_model() {   # $1 = filename
-    local name="$1" from="${ADOPT_FROM_DIR}/$1" to="${MODEL_DIR}/$1"
-
-    [[ -f "$to" || ! -f "$from" ]] && return 0
-
-    log "adopting ${name} from ${ADOPT_FROM_DIR} (kgsm-bot fetched it; this leaf owns it now)"
-    mv -f "$from" "$to" || warn "could not move ${from} — leaving it where it is"
-}
-
-# One model: present and correct is a no-op, present and wrong is replaced, absent is fetched.
-# $1 = what it is for, $2 = filename, $3 = url, $4 = digest, $5 = human size
-fetch_model() {
-    local what="$1" name="$2" url="$3" digest="$4" size="$5"
-    local model="${MODEL_DIR}/${name}"
-
-    if [[ -f "$model" ]] && sha256_matches "$model" "$digest"; then
-        return 0
-    fi
-
-    # A file that is present and wrong is worse than one that is absent: it loads, behaves badly, and
-    # reads as a tuning problem. So it goes BEFORE the fetch is attempted rather than after it
-    # succeeds — if the download then fails, this host reports having no model, which is true and
-    # actionable, instead of quietly producing nonsense.
-    if [[ -f "$model" ]]; then
-        warn "${model} does not match its expected digest — discarding it and re-fetching"
-        rm -f "$model"
-    fi
-
-    log "fetching the ${what} model (~${size}, once) → ${model}"
-
-    # Downloaded beside the target and moved into place only once verified, so an interrupted fetch
-    # leaves no half-file to load.
-    local tmp="${model}.partial"
-    if ! curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$url"; then
-        rm -f "$tmp"
-        warn "could not fetch the ${what} model — this leaf will start without it."
-        warn "  fetch it later:  KGSM_SPEECH_MODELS=1 ./deploy/setup.sh"
-        return 0
-    fi
-
-    if ! sha256_matches "$tmp" "$digest"; then
-        rm -f "$tmp"
-        warn "the downloaded ${what} model does not match its expected digest — discarded."
-        return 0
-    fi
-
-    mv -f "$tmp" "$model"
-    log "${what} model installed ✓"
-}
-
-sha256_matches() {   # $1 = file, $2 = expected digest
-    [[ "$(sha256sum "$1" | cut -d' ' -f1)" == "$2" ]]
+    MODEL_DIR="$MODEL_DIR" MODEL_OWNER="$DEPLOY_USER" "$FETCH_MODELS"
 }
 # ── END PROJECT BLOCK ─────────────────────────────────────────────────────────
 

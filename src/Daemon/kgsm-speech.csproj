@@ -8,7 +8,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>TheKrystalShip.KGSM.Speech.Daemon</RootNamespace>
     <AssemblyName>kgsm-speech</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.4.0</Version>
 
     <!-- Framework-dependent single-file deploy: the host has the .NET 10 runtime, so it is not
          bundled. The RID is supplied at publish time (deploy/deploy.sh passes -r linux-x64). -->
@@ -85,6 +85,29 @@
       <ResolvedFileToPublish
         Remove="@(ResolvedFileToPublish)"
         Condition="'%(Extension)' == '.dll' and $([System.String]::Copy('%(Filename)').StartsWith('onnxruntime'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Keep only the whisper natives this RID can load. Whisper.net.Runtime publishes every
+       architecture it builds for regardless of -r, which is 300MB of Windows, macOS and ARM shared
+       objects a linux-x64 host will never open — three quarters of what this leaf weighs, in a
+       package a node downloads and a release that keeps every superseded version.
+
+       Two directories survive: runtimes/<rid> and runtimes/cuda/<rid>. Whisper probes both and
+       prefers the CUDA one, so dropping the rest changes nothing it can reach. ggml-metal.metal
+       goes with them — it is Metal shader source, compiled by Apple's driver and by nothing on a
+       Linux host. -->
+  <Target Name="DropForeignWhisperNatives" AfterTargets="ComputeFilesToPublish"
+          Condition="'$(RuntimeIdentifier)' != ''">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('runtimes/'))
+                   and !$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('runtimes/$(RuntimeIdentifier)/'))
+                   and !$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('runtimes/cuda/$(RuntimeIdentifier)/'))" />
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="'%(Filename)%(Extension)' == 'ggml-metal.metal'" />
     </ItemGroup>
   </Target>
 

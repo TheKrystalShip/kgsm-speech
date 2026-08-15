@@ -1,0 +1,112 @@
+# Maintainer: Cristian Moraru <info@thekrystalship.com>
+#
+# Build from this directory:  cd packaging && makepkg
+#
+# The speech leaf — one socket-activated daemon holding whisper and kokoro, serving recognition and
+# synthesis to every surface on the host. Socket-activated and idle-exiting: enable the .socket, not
+# the .service. An inactive .service is this leaf's resting state, and ending the process is the only
+# thing that gives back the ~1.6GB and ~1.1GB of video memory the models cost.
+#
+# Framework-dependent, so it declares the .NET runtime — Microsoft.NETCore.App, not ASP.NET: this
+# daemon serves a unix socket with hand-rolled framing and hosts no web stack.
+#
+# The two models (813MB) are NOT in this package. They are fetched by
+# /usr/bin/kgsm-speech-fetch-models into the unit's StateDirectory, which is where they have to live
+# anyway — a package that carried them would be a gigabyte of release asset re-downloaded on every
+# version bump, for files that never change.
+
+pkgname=kgsm-speech
+pkgver=1.4.0
+pkgrel=1
+pkgdesc="KGSM speech leaf — the host's voice: recognition and synthesis for every surface"
+arch=('x86_64')
+url="https://github.com/TheKrystalShip/kgsm-speech"
+license=('GPL-3.0-or-later')
+groups=('kgsm-node')
+# No separate debug package: these are shipped to a private fleet, not a distro archive.
+options=('!debug')
+# libgomp is not optional and not the GPU's: whisper's CPU backend (libggml-cpu-whisper.so) links
+# it, and that backend is what every host without a usable card hears on.
+#
+# curl and coreutils are the model fetcher's rather than the daemon's — but the leaf is mute without
+# the models, so the thing that gets them is not optional either.
+depends=('systemd' 'glibc' 'libgomp' 'dotnet-runtime' 'curl' 'coreutils')
+# The card is worth roughly forty times on recognition and eight on synthesis, and neither refuses
+# without one — so it stays optional. The three are distinct: nvidia-utils carries libcuda.so.1 (the
+# driver), cuda the runtime libraries both backends link, and cuDNN matters for synthesis
+# specifically — a host with a card and no cuDNN hears on the card and speaks on the processor.
+optdepends=(
+    'nvidia-utils: the driver library both GPU backends load'
+    'cuda: GPU recognition and synthesis — both fall back to the processor without it'
+    'cudnn: GPU synthesis specifically'
+)
+backup=('etc/kgsm-speech/kgsm-speech.env')
+install="${pkgname}.install"
+
+_stage() { printf '%s' "${KGSM_STAGE:-${startdir}/../artifacts/publish}"; }
+
+pkgver() {
+    "${startdir}/../deploy/version.sh" --pkgver
+}
+
+build() {
+    local stage; stage="$(_stage)"
+    [[ -e "${stage}/kgsm-speech" ]] || {
+        printf '\n  no publish output at %s\n' "$stage" >&2
+        printf '  build it first:  dotnet publish src/Daemon/kgsm-speech.csproj -c Release -r linux-x64 -o artifacts/publish\n' >&2
+        printf '  or point KGSM_STAGE at an existing one.\n\n' >&2
+        return 1
+    }
+
+    # KokoroSharp's own targets copy the voice files to the BUILD output and stop there, so a publish
+    # tree without them produces a daemon that loads the model and then has no voice to speak in.
+    # The csproj has a target that carries them over; assert the result rather than trusting it, since
+    # the failure is a silent one that only shows up when somebody asks the host to talk.
+    [[ -d "${stage}/voices" ]] || {
+        printf '\n  no voices/ in %s — the daemon would load kokoro and have nothing to speak with\n' "$stage" >&2
+        return 1
+    }
+}
+
+package() {
+    local repo="${startdir}/.." stage; stage="$(_stage)"
+    local prefix="${pkgdir}/opt/${pkgname}"
+
+    install -dm755 "$prefix"
+    cp -a "${stage}/." "${prefix}/"
+    # The same two exclusions deploy.sh's rsync makes, so the packaged tree is the deployed tree.
+    find "$prefix" \( -name '*.pdb' -o -name '*.xml' -o -name '*.dbg' \) -delete
+
+    # Both units ship; only the .socket is meant to be enabled. The .service is pulled in on demand
+    # and exits again after Speech__IdleMinutes.
+    install -Dm644 "${repo}/deploy/kgsm-speech.service" \
+        "${pkgdir}/usr/lib/systemd/system/kgsm-speech.service"
+    install -Dm644 "${repo}/deploy/kgsm-speech.socket" \
+        "${pkgdir}/usr/lib/systemd/system/kgsm-speech.socket"
+
+    # The binary on PATH, for `kgsm-speech --voices` — the one call that proves the socket is bound,
+    # that connecting activates the daemon, and that it reads its configuration. /usr/bin, never
+    # /usr/local/bin: /usr/local belongs to the local administrator and no package may write there.
+    install -dm755 "${pkgdir}/usr/bin"
+    ln -s "/opt/${pkgname}/${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+
+    install -Dm644 "${repo}/deploy/sysusers.d/kgsm-speech.conf" \
+        "${pkgdir}/usr/lib/sysusers.d/kgsm-speech.conf"
+
+    # Root-owned 0640: systemd reads EnvironmentFile= as root before dropping privileges, so nothing
+    # needs to read it as the service user. There is no secret in it either way — this daemon holds
+    # no credential and authenticates nobody.
+    install -Dm640 "${repo}/deploy/kgsm-speech.env.example" \
+        "${pkgdir}/etc/${pkgname}/${pkgname}.env"
+
+    install -Dm644 "${repo}/deploy/kgsm-speech.leaf.json" \
+        "${pkgdir}/var/lib/kgsm/leaves/speech.json"
+
+    # The models are 813MB and belong in the StateDirectory, not in a package. This is the same
+    # script deploy/setup.sh runs, so a node and a development host fetch the same bytes from the
+    # same URLs against the same digests.
+    install -Dm755 "${repo}/deploy/fetch-models.sh" \
+        "${pkgdir}/usr/bin/kgsm-speech-fetch-models"
+
+    install -Dm644 "${repo}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

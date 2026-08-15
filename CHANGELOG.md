@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-15
+
+### Added — this leaf is a package
+
+`packaging/PKGBUILD` and `.github/workflows/release.yml` put kgsm-speech in the fleet's pacman
+repository on the same terms as every other leaf: tagging `v<version>` builds, tests, packages, signs
+and publishes to this repo's release, and `scripts/publish-repo.sh --from-releases` aggregates it into
+the fleet database. The package lays down `/opt/kgsm-speech`, both units, the sysusers fragment, the
+env file, the leaf descriptor, and `kgsm-speech` on PATH.
+
+`libgomp` is a hard dependency: whisper's CPU backend links it, and that backend is what a host
+without a usable card hears on. The card stays optional — `nvidia-utils` for the driver library,
+`cuda` for the runtime, `cudnn` for synthesis specifically.
+
+### Added — one script owns what the models are
+
+`deploy/fetch-models.sh` is the single declaration of the two models' names, URLs and digests.
+`deploy/setup.sh` runs it on a development host; the package installs it as
+`/usr/bin/kgsm-speech-fetch-models` for a node that has no `deploy/` directory. The 813MB stays out of
+the package — it belongs in the StateDirectory, where it survives every upgrade.
+
+### Changed — a publish carries only the natives this host can load
+
+`Whisper.net.Runtime` publishes every architecture it builds for regardless of `-r linux-x64`, which
+is 164MB of Windows, macOS and ARM shared objects a linux-x64 host will never open. `runtimes/<rid>`
+and `runtimes/cuda/<rid>` survive; the rest, and the Metal shader source beside them, do not. The
+package weighs 365MB rather than 499MB, and both models still load on the card.
+
+### Changed — the CHANGELOG numbers the release line
+
+A heading here is the version `deploy/version.sh` prints — the daemon's, which is what the tag matches
+and what the package ships. `TheKrystalShip.KGSM.Speech` versions independently in its own csproj, and
+an entry says so when it moves.
+
 ## [1.3.0] - 2026-08-15
 
 ### Added — what the recogniser is primed with, decided once for every surface

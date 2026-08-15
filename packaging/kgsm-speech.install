@@ -1,0 +1,42 @@
+# pacman's own hooks run systemd-sysusers, systemd-tmpfiles and daemon-reload. Enabling a unit is
+# the administrator's call, not a package's.
+
+post_install() {
+    cat <<'MSG'
+
+  kgsm-speech is installed. Two things before this host can hear or speak:
+
+    1. Fetch the models (813MB, once — they live in /var/lib/kgsm-speech/models and survive
+       every upgrade):
+
+         kgsm-speech-fetch-models
+
+    2. Enable the SOCKET, not the service:
+
+         systemctl enable --now kgsm-speech.socket
+
+  The service is meant to sit inactive. It wakes on the first connection and exits again after
+  Speech__IdleMinutes — that is the only thing that returns the ~1.6GB and ~1.1GB of video memory
+  the models cost, so an inactive kgsm-speech.service is this leaf working correctly.
+
+  Check it with:  kgsm-speech --voices     (activates the daemon; loads no model)
+
+  Run that as root or as a member of the kgsm group — the socket is 0660 kgsm:kgsm, and those
+  permissions are this daemon's whole access boundary.
+
+  Optional overrides live in /etc/kgsm-speech/kgsm-speech.env. Without a usable GPU both
+  recognition and synthesis fall back to the processor rather than refusing.
+
+MSG
+}
+
+post_upgrade() {
+    cat <<'MSG'
+
+  Re-activate to pick up the new build — the daemon holds the old binary until it exits:
+
+    systemctl stop kgsm-speech.socket kgsm-speech.service
+    systemctl start kgsm-speech.socket
+
+MSG
+}
