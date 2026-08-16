@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
+using TheKrystalShip.KGSM.Lifecycle;
 
 namespace TheKrystalShip.KGSM.Speech.Daemon;
 
@@ -28,9 +29,62 @@ namespace TheKrystalShip.KGSM.Speech.Daemon;
 /// gigabyte of video memory, and systemd still holds the socket — the next request brings it back.
 /// </para>
 /// </remarks>
-internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogger logger)
+internal sealed class SpeechServer(
+    Socket listener, SpeechOptions options, LeafLifecycle lifecycle, ILogger logger)
 {
     private readonly SemaphoreSlim _loading = new(1, 1);
+
+    /// <summary>
+    /// Says what this host can and cannot do, once the models have had their chance to load.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠ <b>Degradation only — no start and no stop.</b> This daemon is socket activated and gives its
+    /// memory back by exiting, so being inactive is its resting state rather than a transition. It is
+    /// also why nothing can health-poll it: connecting to the socket is what starts it, and a probe
+    /// would load 1.6GB of models to ask whether it is well.
+    /// </para>
+    /// <para>
+    /// Reported after loading rather than at startup, because until then there is nothing to report:
+    /// the models are loaded on the first request, which is the whole point of a leaf that exits when
+    /// nobody is speaking.
+    /// </para>
+    /// <para>
+    /// The processor fallback is a real degradation and not an implementation detail. These models are
+    /// the reason this leaf exists on a machine with a GPU, and a host quietly recognising speech on
+    /// the CPU is slower in a way that every surface waiting on it feels.
+    /// </para>
+    /// </remarks>
+    private void ReportEngines(SpeechRecogniser ears, SpeechSynthesiser mouth)
+    {
+        Report(SpeechComponents.Hearing, ears.IsAvailable, ears.Runtime, ears.Detail,
+            "nothing said to this host will be understood");
+
+        Report(SpeechComponents.Speaking, mouth.IsAvailable, mouth.Runtime, mouth.Detail,
+            "every answer stays in text");
+
+        void Report(string component, bool available, string runtime, string detail, string cost)
+        {
+            if (!available)
+            {
+                lifecycle.MarkDegraded(component, $"{detail} — {cost}");
+                return;
+            }
+
+            lifecycle.MarkRecovered(component);
+
+            // A model that loaded on the processor is working and slow, which is a different fact from
+            // one that did not load — so it is a finding on its own component rather than on this one.
+            string accelerator = component == SpeechComponents.Hearing
+                ? SpeechComponents.HearingAccelerator
+                : SpeechComponents.SpeakingAccelerator;
+
+            if (runtime.Equals("cpu", StringComparison.OrdinalIgnoreCase))
+                lifecycle.MarkDegraded(accelerator, $"running on the processor: {detail}");
+            else
+                lifecycle.MarkRecovered(accelerator);
+        }
+    }
 
     /// <summary>
     /// The surfaces connected right now, by the name of the process on the other end.
@@ -356,6 +410,8 @@ internal sealed class SpeechServer(Socket listener, SpeechOptions options, ILogg
             logger.LogInformation(
                 "Speech: loaded in {Elapsed}ms — {Hearing}, {Speaking}", timer.ElapsedMilliseconds,
                 ears.IsAvailable ? "hearing" : "deaf", mouth.IsAvailable ? "speaking" : "silent");
+
+            ReportEngines(ears, mouth);
         }
         finally
         {

@@ -8,7 +8,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <RootNamespace>TheKrystalShip.KGSM.Speech.Daemon</RootNamespace>
     <AssemblyName>kgsm-speech</AssemblyName>
-    <Version>1.6.0</Version>
+    <Version>1.7.0</Version>
 
     <!-- Framework-dependent single-file deploy: the host has the .NET 10 runtime, so it is not
          bundled. The RID is supplied at publish time (deploy/deploy.sh passes -r linux-x64). -->
@@ -53,6 +53,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
 
     <PackageReference Include="TheKrystalShip.KGSM.LeafConfig" Version="2.2.0" PrivateAssets="all" />
+
+    <!-- The write half of the KGSM event journal, and nothing else. Two Abstractions packages, no
+         container and no host — which is the whole reason this leaf can take it: it is a bare console
+         app, and the writer is constructed by hand exactly as the firewall's is. -->
+    <PackageReference Include="TheKrystalShip.KGSM.Journal" Version="1.8.0" />
   </ItemGroup>
 
   <ItemGroup>

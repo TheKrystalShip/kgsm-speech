@@ -7,6 +7,10 @@ using Microsoft.Win32.SafeHandles;
 
 using TheKrystalShip.KGSM.Speech;
 using TheKrystalShip.KGSM.Speech.Daemon;
+using TheKrystalShip.KGSM.Core.Models;
+using TheKrystalShip.KGSM.Events;
+using TheKrystalShip.KGSM.Lifecycle;
+using TheKrystalShip.KGSM.Services;
 
 // kgsm-speech — the host's speech engine: one process holding whisper and kokoro, serving every
 // surface that listens or speaks over a unix socket.
@@ -72,7 +76,32 @@ using PosixSignalRegistration term = PosixSignalRegistration.Create(PosixSignal.
 using Socket? listener = Listen(options, logger);
 if (listener is null) return 1;
 
-await new SpeechServer(listener, options, logger).RunAsync(stopping.Token);
+// This leaf's own event journal — the first it has had. It records nothing about what was said or
+// heard: only whether this host can hear and speak at all, which nothing else is in a position to
+// find out. ⚠ A probe cannot ask, because connecting to the socket is what starts this daemon.
+//
+// Constructed by hand rather than resolved, like the firewall's: this is a bare console app with no
+// container, which is exactly the case the journal package's minimal dependency surface exists for.
+var journalWriter = new EventJournalWriter(
+    new EventJournalWriterOptions
+    {
+        Producer = "kgsm-speech",
+        ProducerVersion = ProducerVersion.Of(typeof(SpeechOptions).Assembly),
+    },
+    loggers.CreateLogger<EventJournalWriter>());
+
+// ⚠ Seeded from this leaf's own journal. It exits when idle and so remembers nothing between wakes:
+// measured here, it reported a model it could not load, exited, woke with the model fixed, and wrote
+// no recovery — because the fresh process had never seen the fault. A journal that reports a fault and
+// can never clear it is worse than one that reports neither.
+var lifecycle = new LeafLifecycle(
+    journalWriter,
+    loggers.CreateLogger<LeafLifecycle>(),
+    clock: null,
+    startedAt: null,
+    degraded: LeafState.DegradedComponentsFor("kgsm-speech"));
+
+await new SpeechServer(listener, options, lifecycle, logger).RunAsync(stopping.Token);
 return 0;
 
 // The listening socket: systemd's when it activated us, our own when somebody ran this by hand.
