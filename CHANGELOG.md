@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — every line this leaf writes now carries its own id (`Journal` 1.10.0)
+
+This daemon is socket-activated rather than resident, so it was absent from the sweep that re-pinned
+the resident leaves, and it stayed on `Journal` 1.8.0 writing lines with no `Id`. Its lines were never
+non-conforming — absent is a spelling the contract defines — but nothing could refer to one of its
+events by name, only by where the event happened to sit in the file.
+
+Nothing here changes but the pin: the id is minted by the shared writer.
+
 ### Fixed — a first setup on a host where nothing is installed yet completes
 
 `deploy/setup.sh` enables its unit at boot and starts it only when something exists at the unit's
