@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a packaged install arms the socket, not the service (`1.8.0`)
+
+`packaging/kgsm-speech.install` applies kgsm-base's `50-kgsm.preset` to both units in `post_install`:
+it enables `kgsm-speech.socket` and disables `kgsm-speech.service`. An inactive service is this
+leaf's resting state — ending the process is the only thing that returns the ~1.6GB and ~1.1GB of
+video memory the models cost — so enabling both would defeat the activation. `post_upgrade` does not
+preset: an administrator's `disable` survives every later version.
+
+On an upgrade the node's post-transaction hook performs the dance this leaf needs rather than a plain
+restart: the socket and the service come down together, then the socket is re-armed. The daemon holds
+the old binary until it exits, and it exits on its own idle timer.
+
+`depends=('kgsm-base')`, which carries the `kgsm` account this unit runs as and whose group owns the
+socket — so this package no longer ships `/usr/lib/sysusers.d/kgsm-speech.conf`, and
+`deploy/sysusers.d/` is gone.
+
 ### Fixed — every line this leaf writes now carries its own id (`Journal` 1.10.0)
 
 This daemon is socket-activated rather than resident, so it was absent from the sweep that re-pinned
