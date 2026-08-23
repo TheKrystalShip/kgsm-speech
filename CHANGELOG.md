@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the models are a package (`1.9.0`, `kgsm-speech-models` `1.0.0`)
+
+`packaging/models/PKGBUILD` builds `kgsm-speech-models`, an `arch=any` package carrying the whisper
+small.en and kokoro weights into `/var/lib/kgsm-speech/models` at 0644 — 711MB compressed, 813MB on
+disk. `kgsm-speech` hard-depends on it, so installing the leaf on a node brings everything it needs
+to hear and speak inside the pacman transaction and nothing reaches out afterwards.
+
+It is a separate directory rather than a split package because a split PKGBUILD shares one `pkgver`,
+and these weights move on their own clock: `pkgver` there moves when a URL or a digest moves and at
+no other time. It carries no `groups=('kgsm-node')` — it arrives as a dependency of what a person
+selected, the same reason `kgsm-base` carries none — and it declares the weights' own upstream terms
+(`MIT` for the whisper.cpp ggml conversions, `Apache-2.0` for Kokoro-82M) rather than this project's
+GPL, shipping whisper.cpp's MIT text with them.
+
+The URLs and digests are still declared once, in `deploy/fetch-models.sh`; the PKGBUILD reads them
+back out of it, so `makepkg` and the fetcher put the same bytes in the same place and a rename in
+that script leaves the source arrays empty and fails the build closed.
+
+`/usr/bin/kgsm-speech-fetch-models` stays installed. On a packaged host it verifies what is in the
+model directory, replaces a file that does not match its digest, adopts a copy an earlier kgsm-bot
+install left behind, and fetches into a `MODEL_DIR` elsewhere for a host keeping 813MB on other
+storage.
+
+`tks/scripts/publish-repo.sh` builds both directories. The tag-driven workflow builds only the
+daemon's; what that needs is written down in `tks/artifact-distribution-plan.md`.
+
 ### Changed — a packaged install arms the socket, not the service (`1.8.0`)
 
 `packaging/kgsm-speech.install` applies kgsm-base's `50-kgsm.preset` to both units in `post_install`:

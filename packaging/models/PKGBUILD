@@ -1,0 +1,83 @@
+# Maintainer: Cristian Moraru <info@thekrystalship.com>
+#
+# Build from this directory:  cd packaging/models && makepkg
+#
+# The two models this leaf is for — one to hear with (whisper small.en, 488MB) and one to speak with
+# (kokoro v1.0, 325MB) — fetched from their upstreams and shipped byte-for-byte. A speech-capable
+# node gets every byte it needs inside the pacman transaction and reaches out for nothing afterwards,
+# which is what makes installing one an offline-deterministic operation.
+#
+# Its own package, its own directory and its own version, because the weights and the daemon move on
+# different clocks. A model file that has not changed in a year has no reason to be re-downloaded
+# because the daemon gained a log line, and one package carrying both would put 813MB of release
+# asset behind every version bump. pkgver moves here when a URL or a digest below moves, and at no
+# other time — it is not the leaf's release line and never matches it.
+#
+# There is no groups=('kgsm-node'). This arrives as a dependency of kgsm-speech, and listing it in
+# the node's selection prompt would offer a choice that is not one — the same reason kgsm-base
+# carries no group either.
+#
+# Nothing is built here. makepkg's own source handling fetches the files and checks the digests, and
+# package() copies them into place.
+
+pkgname=kgsm-speech-models
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Speech models for kgsm-speech — whisper small.en to hear with, kokoro to speak with"
+arch=('any')
+url="https://github.com/TheKrystalShip/kgsm-speech"
+# Not this project's GPL. These are third-party weights carrying their own upstream terms — the
+# whisper.cpp ggml conversions are MIT, Kokoro-82M is Apache-2.0 — and no line of this project is in
+# the package, so none of this project's licensing travels with it. The MIT text names a copyright
+# holder, so it cannot come from a shared pool and is fetched and shipped below; Apache-2.0 is
+# declared by Kokoro-82M's model card, which publishes no file to ship.
+license=('MIT' 'Apache-2.0')
+# !debug for the same reason as every other package here: a private fleet, not a distro archive.
+# !strip because the payload is two opaque binaries and the strip pass has nothing to find in them.
+options=('!debug' '!strip')
+
+_modeldir=/var/lib/kgsm-speech/models
+
+# What the two files are — their names, their URLs and their digests — is declared once, in
+# deploy/fetch-models.sh, and read back out of it here. A digest written down twice is two things to
+# keep in step, and the packaged bytes and the fetched bytes have to be the same bytes. `makepkg
+# --printsrcinfo` prints what this resolves to. A grep that matches nothing leaves the arrays empty
+# and makepkg refuses to build, so a rename in that script fails this closed rather than quietly
+# packaging something else.
+eval "$(grep -E '^(RECOGNITION|SYNTHESIS)_MODEL_(NAME|URL|SHA256)=' \
+    "${startdir}/../../deploy/fetch-models.sh")"
+
+# The third source is whisper.cpp's own MIT text, taken at a tag rather than a branch so the bytes
+# this digest describes stay the bytes that are there. Its digest belongs here and nowhere else —
+# fetch-models.sh fetches models, not paperwork.
+_license_url="https://raw.githubusercontent.com/ggerganov/whisper.cpp/v1.7.4/LICENSE"
+
+source=("$RECOGNITION_MODEL_URL" "$SYNTHESIS_MODEL_URL" "whisper.cpp-LICENSE::${_license_url}")
+sha256sums=("$RECOGNITION_MODEL_SHA256"
+            "$SYNTHESIS_MODEL_SHA256"
+            'e562a2ddfaf8280537795ac5ecd34e3012b6582a147ef69ba6a6a5c08c84757d')
+
+# Neither file is an archive, but what gets unpacked is decided by `file` rather than by the
+# extension — so say it, because an "extracted" model leaves package() with nothing to install.
+noextract=("$RECOGNITION_MODEL_NAME" "$SYNTHESIS_MODEL_NAME")
+
+package() {
+    # The unit's StateDirectory, which is where the daemon looks and where these have to live: the
+    # install prefix is synced with `rsync --delete`, and 813MB cannot survive a deploy there.
+    #
+    # Root-owned 0644. The daemon runs as kgsm and only ever reads them, so world-readable is the
+    # whole permission this needs and no account has to exist for the files to land — a package can
+    # be installed before anything has ever started. systemd creates and owns the directory itself
+    # when the unit first runs.
+    #
+    # An upgrade while the daemon holds a model open replaces the path and leaves the running
+    # process on the old inode; it picks up the new one when it idle-exits, which it does on its own
+    # timer with nothing to arrange here.
+    install -Dm644 "${srcdir}/${RECOGNITION_MODEL_NAME}" \
+        "${pkgdir}${_modeldir}/${RECOGNITION_MODEL_NAME}"
+    install -Dm644 "${srcdir}/${SYNTHESIS_MODEL_NAME}" \
+        "${pkgdir}${_modeldir}/${SYNTHESIS_MODEL_NAME}"
+
+    install -Dm644 "${srcdir}/whisper.cpp-LICENSE" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/whisper.cpp-LICENSE"
+}

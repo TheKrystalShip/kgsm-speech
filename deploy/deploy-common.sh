@@ -55,9 +55,10 @@ HEALTH_TRIES="${HEALTH_TRIES:-30}"
 
 # ── The models ────────────────────────────────────────────────────────────────
 # The unit's StateDirectory, which systemd creates owned by User= before ExecStart. What the models
-# ARE — their names, URLs and digests — is declared once in deploy/fetch-models.sh, which a package
-# installs as /usr/bin/kgsm-speech-fetch-models so a node with no deploy/ directory gets the same
-# bytes from the same place.
+# ARE — their names, URLs and digests — is declared once in deploy/fetch-models.sh. A node gets those
+# bytes from the kgsm-speech-models package, whose PKGBUILD reads its URLs and digests out of that
+# same script, and keeps the script itself as /usr/bin/kgsm-speech-fetch-models to verify, repair or
+# relocate them.
 MODEL_DIR="/var/lib/${PROJECT}/models"
 FETCH_MODELS="${REPO_DIR}/deploy/fetch-models.sh"
 

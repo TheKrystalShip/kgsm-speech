@@ -126,16 +126,20 @@ Deploy, like every `kgsm-*` project:
   install prefix because `deploy.sh` syncs that with `rsync --delete`. What they are — names, URLs,
   digests — is declared once in **`deploy/fetch-models.sh`**, which **adopts** `/var/lib/kgsm-bot/models`
   when a host has them from an earlier kgsm-bot install rather than re-downloading 813MB. `setup.sh`
-  runs it here; the package installs it as `/usr/bin/kgsm-speech-fetch-models` for a node with no
-  `deploy/` directory. Never write a second copy of a digest.
+  runs it here; a node gets the same bytes from the `kgsm-speech-models` package and keeps the script
+  as `/usr/bin/kgsm-speech-fetch-models` to verify, repair or relocate them. Never write a second
+  copy of a digest — `packaging/models/PKGBUILD` reads its URLs and sums back out of that script
+  instead of restating them.
 - **A publish carries only the natives this RID can load.** `Whisper.net.Runtime` emits every
   architecture it builds for regardless of `-r`; the `DropForeignWhisperNatives` target keeps
   `runtimes/<rid>` and `runtimes/cuda/<rid>` and drops the rest. Whisper probes both of those and
   prefers the CUDA one, so nothing it can reach is missing.
-- **The package is `packaging/PKGBUILD`**, built by `.github/workflows/release.yml` on a `v*` tag and
-  aggregated into the fleet repository by `tks/scripts/publish-repo.sh --from-releases`. The workflow
-  is **generated** — edit `tks/scripts/ci-template/` and re-run `vendor-ci.sh`, never the copy here.
-  The 813MB of models is deliberately not in it.
+- **Two packages, two PKGBUILD directories.** `packaging/` is the daemon; `packaging/models/` is
+  `kgsm-speech-models`, the 813MB the daemon hard-depends on — a separate directory rather than a
+  split package because a split shares one `pkgver` and these weights move on their own clock.
+  `.github/workflows/release.yml` builds the daemon on a `v*` tag; `tks/scripts/publish-repo.sh`
+  aggregates into the fleet repository and is the one that builds both directories. The workflow is
+  **generated** — edit `tks/scripts/ci-template/` and re-run `vendor-ci.sh`, never the copy here.
 
 ## Version tracking
 
@@ -147,4 +151,8 @@ Deploy, like every `kgsm-*` project:
   to the framing or the message set, because NuGet caches by id+version and a same-version repack
   serves a stale dll to a consumer. It is not the release line: a CHANGELOG entry names it when it
   moves rather than numbering the heading with it.
+- **`kgsm-speech-models` versions independently**, and is the one package here that declares a
+  version rather than asking for one: `pkgver` in `packaging/models/PKGBUILD`. It moves when a model
+  URL or digest moves and at no other time, so it is not a CHANGELOG heading either — an entry names
+  it when it moves.
 - Bump for any user-facing change; update `CHANGELOG.md` in the same commit.

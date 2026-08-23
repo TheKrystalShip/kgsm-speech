@@ -10,8 +10,13 @@
 #
 # This script is the single declaration of what those files are — their URLs and their digests. It
 # is called by deploy/setup.sh on a development host, and installed as
-# /usr/bin/kgsm-speech-fetch-models on a packaged one, so both get the same bytes from the same
-# place and there is no second copy of a digest to drift.
+# /usr/bin/kgsm-speech-fetch-models on a packaged one; packaging/models/PKGBUILD greps the six
+# assignments below and hands them to makepkg as its source array. Every path to a model therefore
+# reads the same URLs against the same digests, and there is no second copy to drift.
+#
+# ⚠ Those six lines are parsed as text. Keep them one plain `NAME=value` per line at the start of a
+# line — a continuation, an export or an `if` around one leaves the PKGBUILD's source array empty,
+# which fails its build rather than packaging something else.
 #
 # Knobs:
 #   KGSM_SPEECH_MODELS=0   do nothing and say so — this host will neither hear nor speak

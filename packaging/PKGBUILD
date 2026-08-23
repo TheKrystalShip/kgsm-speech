@@ -10,10 +10,11 @@
 # Framework-dependent, so it declares the .NET runtime — Microsoft.NETCore.App, not ASP.NET: this
 # daemon serves a unix socket with hand-rolled framing and hosts no web stack.
 #
-# The two models (813MB) are NOT in this package. They are fetched by
-# /usr/bin/kgsm-speech-fetch-models into the unit's StateDirectory, which is where they have to live
-# anyway — a package that carried them would be a gigabyte of release asset re-downloaded on every
-# version bump, for files that never change.
+# The two models (813MB) are their own package, kgsm-speech-models, depended on here — so installing
+# this leaf brings everything it needs to hear and speak and nothing has to reach out afterwards.
+# They are packaged separately rather than carried here because the weights and the daemon move on
+# different clocks: files that never change have no business being a gigabyte of release asset behind
+# every version bump. Their PKGBUILD is packaging/models/, with its own version.
 
 pkgname=kgsm-speech
 pkgver=1.8.0
@@ -28,12 +29,16 @@ options=('!debug')
 # libgomp is not optional and not the GPU's: whisper's CPU backend (libggml-cpu-whisper.so) links
 # it, and that backend is what every host without a usable card hears on.
 #
-# curl and coreutils are the model fetcher's rather than the daemon's — but the leaf is mute without
-# the models, so the thing that gets them is not optional either.
+# kgsm-speech-models carries the 813MB this leaf is mute without. A hard dependency because a host
+# that can neither hear nor speak is not a degraded speech leaf, it is no speech leaf.
+#
+# curl and coreutils are kgsm-speech-fetch-models' rather than the daemon's — it verifies and repairs
+# what is in the model directory, adopts a copy an earlier kgsm-bot install left behind, and fetches
+# into a MODEL_DIR somewhere else, which is what a host keeping the models on other storage uses.
 #
 # kgsm-base carries the kgsm account this unit runs as and whose group owns the socket, plus the
 # preset policy deciding whether this leaf runs here.
-depends=('kgsm-base' 'systemd' 'glibc' 'libgomp' 'dotnet-runtime' 'curl' 'coreutils')
+depends=('kgsm-base' 'kgsm-speech-models' 'systemd' 'glibc' 'libgomp' 'dotnet-runtime' 'curl' 'coreutils')
 # The card is worth roughly forty times on recognition and eight on synthesis, and neither refuses
 # without one — so it stays optional. The three are distinct: nvidia-utils carries libcuda.so.1 (the
 # driver), cuda the runtime libraries both backends link, and cuDNN matters for synthesis
@@ -102,9 +107,11 @@ package() {
     install -Dm644 "${repo}/deploy/kgsm-speech.leaf.json" \
         "${pkgdir}/var/lib/kgsm/leaves/speech.json"
 
-    # The models are 813MB and belong in the StateDirectory, not in a package. This is the same
-    # script deploy/setup.sh runs, so a node and a development host fetch the same bytes from the
-    # same URLs against the same digests.
+    # The same script deploy/setup.sh runs, and the same declaration packaging/models/PKGBUILD reads
+    # its URLs and digests out of — so a node, a development host and the models package all put the
+    # same bytes in the same place. On a packaged host it is the repair tool: it checks what is in
+    # the model directory, replaces a file that does not match its digest, and fetches into a
+    # MODEL_DIR elsewhere for a host that keeps 813MB on other storage.
     install -Dm755 "${repo}/deploy/fetch-models.sh" \
         "${pkgdir}/usr/bin/kgsm-speech-fetch-models"
 

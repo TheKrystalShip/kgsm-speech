@@ -13,10 +13,8 @@ post_install() {
 
     cat <<'MSG'
 
-  kgsm-speech is enabled and can hear and speak once it has the models — 813MB, fetched once, and
-  they live in /var/lib/kgsm-speech/models and survive every upgrade:
-
-    kgsm-speech-fetch-models
+  kgsm-speech is enabled and can hear and speak. The models arrived with it in kgsm-speech-models
+  and sit in /var/lib/kgsm-speech/models, where they survive every upgrade.
 
   Check it with:  kgsm-speech --voices     (activates the daemon; loads no model)
 
@@ -26,6 +24,10 @@ post_install() {
   An inactive kgsm-speech.service is this leaf working correctly. Optional overrides live in
   /etc/kgsm-speech/kgsm-speech.env; without a usable GPU both recognition and synthesis fall back to
   the processor rather than refusing.
+
+  kgsm-speech-fetch-models is the repair and relocation tool: it verifies the models, replaces one
+  that does not match its digest, and fetches into a MODEL_DIR of your choosing for a host that
+  keeps 813MB somewhere other than /var/lib.
 
 MSG
 }
