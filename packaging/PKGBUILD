@@ -17,7 +17,7 @@
 # every version bump. Their PKGBUILD is packaging/models/, with its own version.
 
 pkgname=kgsm-speech
-pkgver=1.8.0
+pkgver=1.9.0
 pkgrel=1
 pkgdesc="KGSM speech leaf — the host's voice: recognition and synthesis for every surface"
 arch=('x86_64')
@@ -25,7 +25,14 @@ url="https://github.com/TheKrystalShip/kgsm-speech"
 license=('GPL-3.0-or-later')
 groups=('kgsm-node')
 # No separate debug package: these are shipped to a private fleet, not a distro archive.
-options=('!debug')
+#
+# !strip is load-bearing, not a preference. This is a .NET single-file publish: the managed
+# assemblies are appended to the apphost ELF and located through a footer at the end of the file.
+# `strip` rewrites the ELF and drops everything past its section table, which takes the bundle with
+# it — leaving a 78KB apphost that starts, finds no bundle, and exits with "Failure processing
+# application bundle; Arithmetic overflow while reading bundle." A Native-AOT binary is a real ELF
+# and survives stripping, which is why only the single-file packages carry this.
+options=('!debug' '!strip')
 # libgomp is not optional and not the GPU's: whisper's CPU backend (libggml-cpu-whisper.so) links
 # it, and that backend is what every host without a usable card hears on.
 #

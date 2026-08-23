@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the packaged binary carries its bundle again (`1.9.1`)
+
+`packaging/PKGBUILD` declares `!strip`. This project publishes single-file: the managed assemblies
+are appended to the apphost ELF and found through a footer at the end of the file, and makepkg's
+strip pass rewrites the ELF and drops everything past its section table — which takes the bundle
+with it. The package installed a 78KB apphost that started, found no bundle and exited with
+*"Failure processing application bundle; Arithmetic overflow while reading bundle"*, while the
+build, the package and namcap all looked correct. A Native-AOT binary is a real ELF and survives
+stripping, which is why the option belongs on this package and not on every one.
+
+### Changed — `kgsm-speech-models` publishes on its own tag (`kgsm-speech-models` `1.0.0`)
+
+`.github/workflows/release.yml` gained a `package-models` job, fired by a `models-v*` tag and
+asserted against the literal `pkgver` in `packaging/models/PKGBUILD`. The models consume no build
+stage and version on their own clock, so they can neither ride the daemon's tag nor share the
+`package` job that opens by downloading a stage. The `build` job now carries a `v`-prefix condition
+so the main pair stays off that tag.
+
 ### Added — the models are a package (`1.9.0`, `kgsm-speech-models` `1.0.0`)
 
 `packaging/models/PKGBUILD` builds `kgsm-speech-models`, an `arch=any` package carrying the whisper
