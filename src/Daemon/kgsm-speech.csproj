@@ -57,7 +57,7 @@
     <!-- The write half of the KGSM event journal, and nothing else. Two Abstractions packages, no
          container and no host — which is the whole reason this leaf can take it: it is a bare console
          app, and the writer is constructed by hand exactly as the firewall's is. -->
-    <PackageReference Include="TheKrystalShip.KGSM.Journal" Version="1.10.0" />
+    <PackageReference Include="TheKrystalShip.KGSM.Journal" Version="1.11.0" />
   </ItemGroup>
 
   <ItemGroup>
