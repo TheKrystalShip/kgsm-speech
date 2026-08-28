@@ -12,7 +12,7 @@ namespace TheKrystalShip.KGSM.Speech.Daemon;
 /// the process — the voices sit beside the binary and the names are the filenames.
 /// </para>
 /// <para>
-/// ⚠ <b>Top level only.</b> Kokoro's other languages are in a subdirectory, and walking into it is how
+/// <b>Top level only.</b> Kokoro's other languages are in a subdirectory, and walking into it is how
 /// a listing of 28 becomes one of 157.
 /// </para>
 /// </remarks>

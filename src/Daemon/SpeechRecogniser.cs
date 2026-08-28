@@ -104,7 +104,7 @@ internal sealed class SpeechRecogniser : IDisposable
     /// Which runtime whisper actually loaded on — <c>gpu</c> or <c>cpu</c>.
     /// </summary>
     /// <remarks>
-    /// ⚠ <b>Not the setting that asked for one.</b> The loader takes the first runtime that
+    /// <b>Not the setting that asked for one.</b> The loader takes the first runtime that
     /// initialises, so a host that asked for the card and did not get it recognises forty times
     /// slower, and the only place that shows is here.
     /// </remarks>

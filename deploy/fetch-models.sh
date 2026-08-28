@@ -14,7 +14,7 @@
 # assignments below and hands them to makepkg as its source array. Every path to a model therefore
 # reads the same URLs against the same digests, and there is no second copy to drift.
 #
-# ⚠ Those six lines are parsed as text. Keep them one plain `NAME=value` per line at the start of a
+# Those six lines are parsed as text. Keep them one plain `NAME=value` per line at the start of a
 # line — a continuation, an export or an `if` around one leaves the PKGBUILD's source array empty,
 # which fails its build rather than packaging something else.
 #

@@ -18,7 +18,7 @@ namespace TheKrystalShip.KGSM.Speech;
 /// bot playing into a voice channel are the same job with different plumbing under it.
 /// </para>
 /// <para>
-/// ⚠ <b>Every character is examined exactly once.</b> Fence state carries across deltas, so anything
+/// <b>Every character is examined exactly once.</b> Fence state carries across deltas, so anything
 /// that re-reads text it has already seen toggles that state a second time and starts speaking the
 /// code it was meant to skip. That is why text is consumed into the spoken buffer as it arrives
 /// rather than being re-derived from a raw buffer whenever a sentence might be ready — and why
@@ -26,7 +26,7 @@ namespace TheKrystalShip.KGSM.Speech;
 /// enumerates an iterator consumes nothing, and the reply would go missing with nothing to say so.
 /// </para>
 /// <para>
-/// ⚠ <b>A fenced code block is not speech.</b> It spans sentences, its "sentences" are lines of
+/// <b>A fenced code block is not speech.</b> It spans sentences, its "sentences" are lines of
 /// syntax, and reading one aloud is thirty seconds of punctuation. Everything between a pair of
 /// fences is dropped, and an unclosed fence swallows the rest of the answer — which is correct: an
 /// answer that opened a fence and stopped is a code block, whatever comes after it.
@@ -88,7 +88,7 @@ public sealed class SpokenSentences
                 continue;
             }
 
-            // ⚠ A sentence ends at punctuation FOLLOWED BY WHITESPACE, which is why the decision is
+            // A sentence ends at punctuation FOLLOWED BY WHITESPACE, which is why the decision is
             // taken one character late. A dot with a letter after it is a version, a filename or a
             // hostname — `kgsm.sh`, `1.2.3`, `ggml-small.en.bin` — and cutting there splits a sentence
             // mid-word, reads half of it aloud, and spends a synthesis request doing it.
@@ -157,7 +157,7 @@ public sealed class SpokenSentences
     /// twice — which is what makes "Two sentences. On one line." two of them.
     /// </para>
     /// <para>
-    /// ⚠ <b>A fence marker counts only at the true start of a line.</b> A sentence ending part-way
+    /// <b>A fence marker counts only at the true start of a line.</b> A sentence ending part-way
     /// along a line leaves the rest of that line in a fresh buffer, and treating that as a line start
     /// would read "Done. ```yaml" as opening a fence — which swallows every word after it, silently
     /// and for the rest of the answer.

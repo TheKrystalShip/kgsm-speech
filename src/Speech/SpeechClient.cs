@@ -202,7 +202,7 @@ public sealed class SpeechClient : IDisposable, IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// <para>
-    /// ⚠ <b>Asking starts the daemon</b>, as every call here does — the socket is systemd's and
+    /// <b>Asking starts the daemon</b>, as every call here does — the socket is systemd's and
     /// connecting to it is the trigger. It loads no model, so the process it starts is a small one,
     /// but a caller that asks on a timer is a caller that keeps one running. Ask when somebody is
     /// looking.
@@ -227,7 +227,7 @@ public sealed class SpeechClient : IDisposable, IAsyncDisposable
     /// Speaks in <paramref name="voice"/> from the next sentence on, <b>on every surface this host has</b>.
     /// </summary>
     /// <remarks>
-    /// ⚠ The voice belongs to the host, not to the caller: this is the same setting the Control Panel
+    /// The voice belongs to the host, not to the caller: this is the same setting the Control Panel
     /// shows, changed from somewhere else. A surface offering it has to say so — and it lasts until the
     /// daemon restarts, because the durable value is the leaf's own configuration.
     /// </remarks>

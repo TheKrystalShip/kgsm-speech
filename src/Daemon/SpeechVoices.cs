@@ -17,7 +17,7 @@ namespace TheKrystalShip.KGSM.Speech.Daemon;
 /// than disappearing.
 /// </para>
 /// <para>
-/// ⚠ <b>The leaf descriptor carries this same list as a literal</b>, because an attribute argument has
+/// <b>The leaf descriptor carries this same list as a literal</b>, because an attribute argument has
 /// to be a constant and cannot reference this. They are checked against each other by a test; edit
 /// both or the test will say so.
 /// </para>

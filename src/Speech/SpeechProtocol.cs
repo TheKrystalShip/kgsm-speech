@@ -85,7 +85,7 @@ public static class SpeechProtocol
         /// What this daemon is doing right now — for a surface reporting on it rather than using it.
         /// </summary>
         /// <remarks>
-        /// ⚠ <b>The one message that does not count as being asked.</b> Everything else here pushes the
+        /// <b>The one message that does not count as being asked.</b> Everything else here pushes the
         /// idle deadline out, because everything else is somebody using this. A panel polling for a
         /// status is not, and treating it as such would hold 1.6GB of models resident for as long as
         /// anybody had the page open.

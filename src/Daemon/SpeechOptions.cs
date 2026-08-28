@@ -138,7 +138,7 @@ public class SpeechOptions
     /// The socket surfaces reach this daemon on.
     /// </summary>
     /// <remarks>
-    /// ⚠ Must match the <c>ListenStream=</c> in <c>kgsm-speech.socket</c>: systemd binds that path and
+    /// Must match the <c>ListenStream=</c> in <c>kgsm-speech.socket</c>: systemd binds that path and
     /// hands the listening socket over, so this value is only consulted when the daemon is started by
     /// hand. Changing one without the other leaves surfaces connecting to a socket nobody serves.
     /// </remarks>

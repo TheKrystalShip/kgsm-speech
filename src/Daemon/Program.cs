@@ -78,7 +78,7 @@ if (listener is null) return 1;
 
 // This leaf's own event journal — the first it has had. It records nothing about what was said or
 // heard: only whether this host can hear and speak at all, which nothing else is in a position to
-// find out. ⚠ A probe cannot ask, because connecting to the socket is what starts this daemon.
+// find out. A probe cannot ask, because connecting to the socket is what starts this daemon.
 //
 // Constructed by hand rather than resolved, like the firewall's: this is a bare console app with no
 // container, which is exactly the case the journal package's minimal dependency surface exists for.
@@ -90,7 +90,7 @@ var journalWriter = new EventJournalWriter(
     },
     loggers.CreateLogger<EventJournalWriter>());
 
-// ⚠ Seeded from this leaf's own journal. It exits when idle and so remembers nothing between wakes:
+// Seeded from this leaf's own journal. It exits when idle and so remembers nothing between wakes:
 // measured here, it reported a model it could not load, exited, woke with the model fixed, and wrote
 // no recovery — because the fresh process had never seen the fault. A journal that reports a fault and
 // can never clear it is worse than one that reports neither.

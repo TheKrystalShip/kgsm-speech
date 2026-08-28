@@ -70,7 +70,7 @@ internal sealed class SpeechSynthesiser : IDisposable
     /// The voices read off disk so far, by name.
     /// </summary>
     /// <remarks>
-    /// ⚠ <b>Kept so a voice tried a second time is free, and never populated ahead of use.</b>
+    /// <b>Kept so a voice tried a second time is free, and never populated ahead of use.</b>
     /// <see cref="KokoroVoiceManager"/> is deliberately untouched: its accessor loads <em>every</em>
     /// voice in the directory the first time it is asked for one — 157 arrays including every other
     /// language's, measured at 78MB of float32 resident to speak in one of them, all of it over the
@@ -148,7 +148,7 @@ internal sealed class SpeechSynthesiser : IDisposable
     /// Which runtime the model opened on — <c>gpu</c> or <c>cpu</c>.
     /// </summary>
     /// <remarks>
-    /// ⚠ <b>Not the setting that asked for one.</b> The CUDA path needs cuDNN, which plenty of hosts do
+    /// <b>Not the setting that asked for one.</b> The CUDA path needs cuDNN, which plenty of hosts do
     /// not have, and falling back to the processor is eight times slower and otherwise invisible.
     /// </remarks>
     public string Runtime { get; private set; } = "unknown";

@@ -29,7 +29,7 @@
     // again at the cost of a few seconds' loading.
     "IdleMinutes": 0,
 
-    // ⚠ Must match ListenStream= in kgsm-speech.socket. systemd binds that path and hands the
+    // Must match ListenStream= in kgsm-speech.socket. systemd binds that path and hands the
     // listening socket over, so this is only consulted when the daemon is started by hand.
     "SocketPath": "/run/kgsm-speech/speech.sock"
   },

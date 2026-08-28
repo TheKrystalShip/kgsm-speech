@@ -25,7 +25,7 @@ namespace KGSM.Speech.Tests;
 /// about a model nobody can verify by reading the code.
 /// </para>
 /// <para>
-/// ⚠ <b>The speech is synthesised, so this measures the decision and not the hearing.</b> Kokoro reads
+/// <b>The speech is synthesised, so this measures the decision and not the hearing.</b> Kokoro reads
 /// each phrase and whisper transcribes it; what changes between the two runs is only the prior
 /// context. That isolates exactly the thing being tested — which of several plausible spellings of the
 /// same sound gets chosen — and says nothing about how the recogniser copes with a real room.

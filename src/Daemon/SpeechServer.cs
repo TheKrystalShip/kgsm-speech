@@ -39,7 +39,7 @@ internal sealed class SpeechServer(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// ⚠ <b>Degradation only — no start and no stop.</b> This daemon is socket activated and gives its
+    /// <b>Degradation only — no start and no stop.</b> This daemon is socket activated and gives its
     /// memory back by exiting, so being inactive is its resting state rather than a transition. It is
     /// also why nothing can health-poll it: connecting to the socket is what starts it, and a probe
     /// would load 1.6GB of models to ask whether it is well.
@@ -226,7 +226,7 @@ internal sealed class SpeechServer(
     {
         try
         {
-            // ⚠ Everything except a status report counts as somebody using this daemon and pushes the
+            // Everything except a status report counts as somebody using this daemon and pushes the
             // idle deadline out. A status report deliberately does not: a panel watching this would
             // otherwise hold the models resident for as long as anybody had the page open, which is
             // precisely the 1.6GB the idle-exit exists to give back.

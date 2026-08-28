@@ -5,7 +5,7 @@ namespace TheKrystalShip.KGSM.Speech.Daemon;
 /// </summary>
 /// <remarks>
 /// <para>
-/// ⚠ <b>This daemon reports degradation only — never a start or a stop.</b> It is socket activated and
+/// <b>This daemon reports degradation only — never a start or a stop.</b> It is socket activated and
 /// gives its memory back by exiting, so inactive is its resting state rather than a transition. That
 /// is also why nothing on this host can health-poll it: connecting to the socket is what starts it,
 /// and a probe would load 1.6GB of models to ask whether it is well. Self-reporting is the only way

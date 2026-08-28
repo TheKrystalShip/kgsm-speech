@@ -90,7 +90,7 @@ plus one `manage-units` call on this project's own service — `start` when the 
 is not running). Both are dispatched as the same `manage-units` action, so a host without the grant is
 refused either way and the probe measures the grant rather than the unit.
 
-⚠ Measured in the positive direction only. The deploying user on the development host is in
+Measured in the positive direction only. The deploying user on the development host is in
 `wheel`, and two pre-existing polkit rules there grant that group every
 `org.freedesktop.systemd1.*` action outright, so no systemctl call by that user can be refused
 and the negative path cannot be exercised on it. That `try-restart` consults polkit before it
@@ -131,7 +131,7 @@ for it.
 new message kinds. The payload is `key=value` lines rather than fixed offsets, because this one grows
 — a reader skips a key it does not know and keeps every one it does.
 
-⚠ **Asking for a status is the one message that does not push the idle deadline out.** Everything else
+**Asking for a status is the one message that does not push the idle deadline out.** Everything else
 on this wire is somebody using the daemon; a panel watching it is not, and counting it would hold
 1.6GB of models resident for as long as anybody had the page open.
 
@@ -212,18 +212,18 @@ rules live here, in the package both already depend on.
 
 The rules, each of which cost a failing test somewhere to find:
 
-- ⚠ **Every character is consumed exactly once.** Fence state carries across deltas, so an
+- **Every character is consumed exactly once.** Fence state carries across deltas, so an
   implementation that re-reads text it has already seen toggles that state a second time and starts
   reading the code aloud. `Take` therefore returns a finished list rather than a lazy sequence: a
   caller that never enumerates an iterator consumes nothing at all, and the reply would go missing
   with nothing anywhere to say so.
-- ⚠ **A sentence ends at terminal punctuation followed by whitespace**, decided one character late.
+- **A sentence ends at terminal punctuation followed by whitespace**, decided one character late.
   `kgsm.sh`, `1.2.3` and `ggml-small.en.bin` are full of dots, and cutting at one reads half a
   sentence aloud and spends a synthesis request doing it.
-- ⚠ **A fenced block is dropped, not spoken** — it spans sentences and its "sentences" are lines of
+- **A fenced block is dropped, not spoken** — it spans sentences and its "sentences" are lines of
   syntax. A fence the reply never closes swallows the rest of it, which is correct: an answer that
   opened a fence and stopped is a code block, whatever follows.
-- ⚠ **A fence marker counts only at the true start of a line.** A sentence ending part-way along a
+- **A fence marker counts only at the true start of a line.** A sentence ending part-way along a
   line leaves the rest of it in a fresh buffer, and reading that as a line start takes
   "Done. ```yaml" for a fence — silencing every word after it for the rest of the answer.
 - **A line ending is a boundary**, so a heading and a list item are each their own breath.
@@ -243,7 +243,7 @@ The rules, each of which cost a failing test somewhere to find:
 there is so far, a 44-byte RIFF header a browser decodes with no library. The daemon synthesises once
 either way — a format is a wrapper applied on the way out, not a second synthesis.
 
-⚠ **Its own message rather than a field on `Synthesize`.** That one is already spoken by a deployed
+**Its own message rather than a field on `Synthesize`.** That one is already spoken by a deployed
 client, and a shape that changed under it would be misread rather than refused. A caller that plays
 audio itself — a Discord connection takes PCM — keeps sending the shorthand forever and needs no
 version bump.
@@ -288,7 +288,7 @@ its kernels. Ending a process releases everything, so the models live in one tha
 - **`TheKrystalShip.KGSM.Speech`** carries the wire protocol and the client, so a contract break is a
   compile break rather than a socket that goes quiet.
 
-⚠ `KokoroVoiceManager` is deliberately untouched: its accessors bulk-load the whole `voices/` tree —
+`KokoroVoiceManager` is deliberately untouched: its accessors bulk-load the whole `voices/` tree —
 157 arrays, every other language included, 61MB of resident float32 to speak in one voice, on the LOH
 and never compacted. One voice is read with `KokoroVoice.FromPath`, and listing what is available
 reads the directory.

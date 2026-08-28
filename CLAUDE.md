@@ -45,7 +45,7 @@ Deploy, like every `kgsm-*` project:
     complete. It is here rather than in each surface because where a reply is cut decides what a
     listener hears and when, and two surfaces answering that separately answer it differently within
     a release. Pure string work — no dependency, no protocol.
-  - ⚠ **Every character is consumed exactly once**, which is why `Take` returns a finished list and
+  - **Every character is consumed exactly once**, which is why `Take` returns a finished list and
     not a lazy sequence. Fence state carries across deltas, so re-reading text already seen toggles it
     twice and starts reading the code aloud — and a caller that never enumerates an iterator consumes
     nothing at all, losing the reply with nothing to say so.
@@ -56,7 +56,7 @@ Deploy, like every `kgsm-*` project:
     failure priming introduces — whisper handing the context back as though somebody had said it.
     A surface owns where the names come from and how often it re-reads them; it does not own how
     they are written down.
-  - ⚠ **A sentence ends at terminal punctuation *followed by whitespace*.** `kgsm.sh`, `1.2.3` and
+  - **A sentence ends at terminal punctuation *followed by whitespace*.** `kgsm.sh`, `1.2.3` and
     `ggml-small.en.bin` are full of dots; cutting at one says half a sentence and pays a synthesis
     request for it. A **fenced block is dropped**, an unclosed one swallows the rest of the answer,
     and a fence marker counts **only at the true start of a line** — a sentence ending mid-line leaves
@@ -80,7 +80,7 @@ Deploy, like every `kgsm-*` project:
   travels with each sentence, or is omitted to mean "this host's voice". A client that reconnects
   after an idle-exit is answered exactly as one that never left — which is what makes the idle-exit
   invisible and the client's reconnect logic trivial.
-- ⚠ **Asking for a status is the one message that does not count as being asked.** Everything else on
+- **Asking for a status is the one message that does not count as being asked.** Everything else on
   this wire is somebody using the daemon and pushes the idle deadline out; a panel watching it is not,
   and counting it would hold the models resident for as long as anybody had the page open. Connecting
   still starts the daemon — that is systemd's socket doing its job — so a surface reports on this leaf
@@ -97,7 +97,7 @@ Deploy, like every `kgsm-*` project:
   sound the same in Discord as in a browser without two settings being kept in step. `SpeakAs` changes
   it for **everyone** until the daemon restarts; the durable value is this leaf's own configuration
   and nothing here writes it back.
-- ⚠ **Never call `KokoroVoiceManager`.** Its accessors bulk-load the whole `voices/` tree the first
+- **Never call `KokoroVoiceManager`.** Its accessors bulk-load the whole `voices/` tree the first
   time they are asked for anything — **157 `.npy` arrays**, every other language included, measured at
   61MB of resident float32 to speak in one voice, on the LOH and never compacted.
   `KokoroVoice.FromPath` reads exactly one (~0.5MB). `InstalledVoices` lists the **directory** and

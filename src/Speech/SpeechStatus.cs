@@ -15,7 +15,7 @@ namespace TheKrystalShip.KGSM.Speech;
 /// do are exactly what somebody reads this to find out.
 /// </para>
 /// <para>
-/// ⚠ <b>The counters are since this process started, and the process ends on its own.</b> A daemon
+/// <b>The counters are since this process started, and the process ends on its own.</b> A daemon
 /// that idled out has taken its tallies with it, so <see cref="StartedAt"/> travels beside them: a
 /// surface that renders "12 utterances" without saying since when is describing a window nobody
 /// chose.
@@ -51,7 +51,7 @@ public sealed record SpeechStatus
     /// When something was last asked of this daemon.
     /// </summary>
     /// <remarks>
-    /// ⚠ Asking for this status is deliberately not "asking" — a surface polling it would hold the
+    /// Asking for this status is deliberately not "asking" — a surface polling it would hold the
     /// idle window open forever and the memory would never come back.
     /// </remarks>
     public DateTimeOffset? LastAskedAt { get; init; }

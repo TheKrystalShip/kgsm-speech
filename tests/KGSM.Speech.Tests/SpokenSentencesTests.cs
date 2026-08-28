@@ -128,7 +128,7 @@ public class SpokenSentencesTests
     [InlineData("The host is running version 2.0.58 of the engine and everything looks fine.")]
     public void ADotInsideAWordDoesNotEndTheSentence(string reply)
     {
-        // ⚠ Version numbers, filenames and hostnames are full of dots, and this domain is full of all
+        // Version numbers, filenames and hostnames are full of dots, and this domain is full of all
         // three. Cutting at one splits a sentence mid-word and spends a synthesis request saying half
         // of it — so a sentence ends at punctuation FOLLOWED BY WHITESPACE, decided one character late.
         Say(reply).Should().ContainSingle();
@@ -174,7 +174,7 @@ public class SpokenSentencesTests
     [Fact]
     public void AFencedCodeBlockIsNotRead()
     {
-        // ⚠ The trap this class exists for. Segmenting first and stripping second reads the contents of
+        // The trap this class exists for. Segmenting first and stripping second reads the contents of
         // a fence out one line at a time — thirty seconds of punctuation.
         List<string> said = Say(
             "Here is the config you asked about.\n",
@@ -226,7 +226,7 @@ public class SpokenSentencesTests
     [Fact]
     public void AFencedBlockArrivingMidWordIsStillDropped()
     {
-        // ⚠ Fence state carries across deltas, so anything that re-reads text it has already seen
+        // Fence state carries across deltas, so anything that re-reads text it has already seen
         // toggles it twice and starts reading the code aloud. Sliced small enough that a re-reading
         // implementation would.
         const string reply =
@@ -266,7 +266,7 @@ public class SpokenSentencesTests
     [Fact]
     public void AFenceMarkerPartWayAlongALineDoesNotOpenOne()
     {
-        // ⚠ A sentence ending mid-line leaves the rest of that line in a fresh buffer. Reading that as
+        // A sentence ending mid-line leaves the rest of that line in a fresh buffer. Reading that as
         // a line start would take "Done. ```yaml" for a fence and silently swallow every word after
         // it, for the rest of the answer.
         Heard("Done. ```yaml``` and the rest of this answer is still worth hearing.")
@@ -321,7 +321,7 @@ public class SpokenSentencesTests
     [Fact]
     public void ALinkIsReadAsItsText()
     {
-        // ⚠ An address read aloud is noise, and its dots would cut the sentence in the middle.
+        // An address read aloud is noise, and its dots would cut the sentence in the middle.
         List<string> said = Say(
             "The panel is at [the control panel](https://example.invalid) whenever you need it.");
 
@@ -390,7 +390,7 @@ public class SpokenSentencesTests
     [Fact]
     public void ALongAnswerIsSpokenInFull()
     {
-        // ⚠ Nothing here decides that somebody has heard enough. Cutting a reply short leaves the
+        // Nothing here decides that somebody has heard enough. Cutting a reply short leaves the
         // answer in the room disagreeing with the answer on the screen, and nothing anywhere to say
         // which was which. How long a reply runs is the assistant's to control.
         string reply = string.Join(" ", Enumerable.Repeat("Minecraft is running.", 60));
