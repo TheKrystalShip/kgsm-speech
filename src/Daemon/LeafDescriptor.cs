@@ -13,6 +13,13 @@ using TheKrystalShip.KGSM.LeafConfig;
     // Control Panel renders it neutrally rather than as "stopped".
     OnDemand = true)]
 
+// Lowest precedence first — the order the daemon itself resolves them in. Without these the panel
+// would report every value this leaf runs with as the descriptor's declared default, including the
+// four its unit sets, which is a different claim from the one the page is for.
+[assembly: LeafFloorSource("appsettings", "/opt/kgsm-speech/kgsm-speech.settings.json")]
+[assembly: LeafFloorSource("systemd-unit", "kgsm-speech.service")]
+[assembly: LeafFloorSource("env-file", "/etc/kgsm-speech/kgsm-speech.env")]
+
 [assembly: LeafGroup("voice", "Voice", 1)]
 [assembly: LeafGroup("general", "General", 0)]
 [assembly: LeafGroup("models", "Models", 2)]

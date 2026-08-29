@@ -6,7 +6,20 @@
   "role": "The host's voice — speech recognition and synthesis for every surface that listens or speaks.",
   "onDemand": true,
   "applyMode": "restart",
-  "floorSources": [],
+  "floorSources": [
+    {
+      "kind": "appsettings",
+      "path": "/opt/kgsm-speech/kgsm-speech.settings.json"
+    },
+    {
+      "kind": "systemd-unit",
+      "path": "kgsm-speech.service"
+    },
+    {
+      "kind": "env-file",
+      "path": "/etc/kgsm-speech/kgsm-speech.env"
+    }
+  ],
   "groups": [
     {
       "id": "general",

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — this leaf declares where its configuration comes from (1.10.0)
+
+The descriptor names its three floor sources: the settings file beside the binary, `kgsm-speech.service`
+and `/etc/kgsm-speech/kgsm-speech.env`. Declaring none of them made the Control Panel report every value
+this leaf runs with as the descriptor's declared default, including the four its unit sets — a different
+claim from the one that page exists to make.
+
 ### Fixed — the packaged binary carries its bundle again (`1.9.1`)
 
 `packaging/PKGBUILD` declares `!strip`. This project publishes single-file: the managed assemblies
