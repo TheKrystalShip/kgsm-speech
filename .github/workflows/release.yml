@@ -71,11 +71,13 @@ jobs:
           # loads kokoro and then has no voice to speak in — silent until somebody asks it to talk.
           test -d artifacts/publish/voices
 
+      - name: Pack the stage, modes included
+        run: tar -C artifacts/publish -cf stage.tar .
+
       - uses: actions/upload-artifact@v7
         with:
           name: stage
-          path: artifacts/publish
-          include-hidden-files: true
+          path: stage.tar
           retention-days: 1
   package:
     needs: build
@@ -92,7 +94,9 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: stage
-          path: artifacts/publish
+
+      - name: Unpack the stage
+        run: mkdir -p artifacts/publish && tar -C artifacts/publish -xf stage.tar
       # makepkg refuses to run as root, and root-owned sources are unreadable to the build user.
       - name: Create the build user
         run: |
