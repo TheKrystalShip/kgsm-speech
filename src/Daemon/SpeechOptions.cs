@@ -1,4 +1,4 @@
-using TheKrystalShip.KGSM.LeafConfig;
+using TheKrystalShip.KGSM.ComponentConfig;
 
 namespace TheKrystalShip.KGSM.Speech.Daemon;
 
@@ -10,7 +10,7 @@ namespace TheKrystalShip.KGSM.Speech.Daemon;
 /// none of them names a voice unless it deliberately wants a different one — so a person hears the
 /// same assistant in Discord as in a browser, and changing that is one setting in one place.
 /// </remarks>
-[LeafSection(Section)]
+[ConfigSection(Section)]
 public class SpeechOptions
 {
     public const string Section = "Speech";
@@ -23,23 +23,23 @@ public class SpeechOptions
     /// a 488MB download is not something to re-fetch on every deploy.
     /// </remarks>
     /// <panel>The speech recognition model file. Without it nothing said out loud is understood.</panel>
-    [LeafField("recognitionModel", "Recognition model", Group = "models", Type = LeafType.Path)]
+    [ConfigField("recognitionModel", "Recognition model", Group = "models", Type = ConfigType.Path)]
     public string ModelPath { get; set; } = "/var/lib/kgsm-speech/models/ggml-small.en.bin";
 
     /// <panel>Whether to recognise speech on the graphics card. Around forty times faster than the
     /// processor; a host without a usable card falls back on its own.</panel>
-    [LeafField("recognitionUseGpu", "Recognise on the GPU", Group = "models")]
+    [ConfigField("recognitionUseGpu", "Recognise on the GPU", Group = "models")]
     public bool UseGpu { get; set; } = true;
 
     /// <summary>The Kokoro model used to synthesise speech.</summary>
     /// <panel>The speech synthesis model file. Without it surfaces answer in text only.</panel>
-    [LeafField("synthesisModel", "Synthesis model", Group = "models", Type = LeafType.Path)]
+    [ConfigField("synthesisModel", "Synthesis model", Group = "models", Type = ConfigType.Path)]
     public string SpeechModelPath { get; set; } = "/var/lib/kgsm-speech/models/kokoro.onnx";
 
     /// <panel>Whether to synthesise speech on the graphics card. Around eight times faster than the
     /// processor and worth roughly 700MB of video memory; a host without a usable card falls back on
     /// its own.</panel>
-    [LeafField("synthesisUseGpu", "Synthesise on the GPU", Group = "models")]
+    [ConfigField("synthesisUseGpu", "Synthesise on the GPU", Group = "models")]
     public bool SpeakUseGpu { get; set; } = true;
 
     /// <summary>
@@ -64,7 +64,7 @@ public class SpeechOptions
     /// within each accent, and the gap is worth hearing: the ones at the top of each group were
     /// trained on hours of speech and the ones at the bottom on minutes, which is the difference
     /// between a voice that sounds like a person and one that sounds like a synthesiser.</panel>
-    [LeafField("voice", "Speaking voice", Group = "voice", Type = LeafType.Enum, Values = [
+    [ConfigField("voice", "Speaking voice", Group = "voice", Type = ConfigType.Enum, Values = [
         // American — af_heart and af_bella are the best-trained voices Kokoro ships at all.
         "af_heart", "af_bella", "af_nicole", "af_aoede", "af_kore", "af_sarah",
         "af_alloy", "af_nova", "af_sky", "af_jessica", "af_river",
@@ -107,7 +107,7 @@ public class SpeechOptions
     /// was trained at; higher is faster. Worth moving in small steps and listening — the voices stay
     /// natural a little way either side of 100 and start to sound wrong well before the ends of this
     /// range.</panel>
-    [LeafField("speechRate", "Speaking rate", Group = "voice", Type = LeafType.Int, Unit = "%",
+    [ConfigField("speechRate", "Speaking rate", Group = "voice", Type = ConfigType.Int, Unit = "%",
         Min = SlowestRate, Max = FastestRate)]
     public int SpeechRate { get; set; } = 100;
 
@@ -131,7 +131,7 @@ public class SpeechOptions
     /// around 1.6GB of memory and a gigabyte of video memory, all of which comes back when this
     /// exits — but loading them again takes a few seconds, which the next person to speak waits for.
     /// Zero stays loaded until the host restarts.</panel>
-    [LeafField("idleMinutes", "Unload after", Group = "lifetime", Unit = "minutes", Min = 0, Max = 1440)]
+    [ConfigField("idleMinutes", "Unload after", Group = "lifetime", Unit = "minutes", Min = 0, Max = 1440)]
     public int IdleMinutes { get; set; } = 0;
 
     /// <summary>
@@ -144,7 +144,7 @@ public class SpeechOptions
     /// </remarks>
     /// <panel>The unix socket other services reach this one on. It has to match the socket unit, so
     /// leave it alone unless you are moving both.</panel>
-    [LeafField("socketPath", "Control socket", Group = "wiring", Type = LeafType.Path,
-        Risk = LeafRisk.Wiring)]
+    [ConfigField("socketPath", "Control socket", Group = "wiring", Type = ConfigType.Path,
+        Risk = ConfigRisk.Wiring)]
     public string SocketPath { get; set; } = "/run/kgsm-speech/speech.sock";
 }

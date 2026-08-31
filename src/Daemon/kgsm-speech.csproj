@@ -23,8 +23,8 @@
 
     <!-- The leaf config descriptor is generated from the settings type in this project. These name
          the two files the generator works between. -->
-    <LeafSettingsFile>kgsm-speech.settings.json</LeafSettingsFile>
-    <LeafDescriptorFile>$(MSBuildProjectDirectory)/../../deploy/kgsm-speech.leaf.json</LeafDescriptorFile>
+    <ComponentSettingsFile>kgsm-speech.settings.json</ComponentSettingsFile>
+    <ComponentDescriptorFile>$(MSBuildProjectDirectory)/../../deploy/kgsm-speech.leaf.json</ComponentDescriptorFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,7 +52,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
 
-    <PackageReference Include="TheKrystalShip.KGSM.LeafConfig" Version="2.2.0" PrivateAssets="all" />
+    <PackageReference Include="TheKrystalShip.KGSM.ComponentConfig" Version="3.0.0" PrivateAssets="all" />
 
     <!-- The write half of the KGSM event journal, and nothing else. Two Abstractions packages, no
          container and no host — which is the whole reason this leaf can take it: it is a bare console

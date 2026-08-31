@@ -68,7 +68,7 @@ public class InstalledVoicesTests
         Attribute field = typeof(SpeechOptions)
             .GetProperty(nameof(SpeechOptions.Voice))!
             .GetCustomAttributes()
-            .Single(a => a.GetType().Name == "LeafFieldAttribute");
+            .Single(a => a.GetType().Name == "ConfigFieldAttribute");
 
         string[] declared = (string[])field.GetType().GetProperty("Values")!.GetValue(field)!;
         declared.Should().Equal(SpeechVoices.Preferred);
