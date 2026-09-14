@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using TheKrystalShip.KGSM.Speech.Daemon;
 using TheKrystalShip.Speech.Engine;
+using TheKrystalShip.Speech.Engine.Kokoro;
 
 using Xunit;
 
@@ -38,11 +39,11 @@ public class VoiceDescriptorTests
     }
 
     [Fact]
-    public void ThisHostAnswersOutLoud()
+    public void ThisHostCarriesASynthesiserToRegister()
     {
-        // Every KGSM surface speaks with this daemon's voice, so a host that silently stopped
-        // registering a synthesiser would leave every one of them answering in text with nothing
-        // saying why.
-        new SpeechOptions().ForEngine().Synthesis.Should().BeTrue();
+        // Every KGSM surface speaks with this daemon's voice. Synthesis is a package reference
+        // rather than a setting, so the way it silently disappears is the reference being dropped —
+        // which would leave every surface answering in text with nothing saying why.
+        typeof(KokoroSynthesis).Should().BeAssignableTo<ISynthesiserFactory>();
     }
 }

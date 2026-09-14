@@ -36,7 +36,8 @@
          the engine with its configuration, somewhere to report degradation, and a lifetime; the
          descriptor, the journal and the leaf identity stay here. -->
     <PackageReference Include="TheKrystalShip.Speech" Version="1.0.0" />
-    <PackageReference Include="TheKrystalShip.Speech.Engine" Version="1.0.0" />
+    <PackageReference Include="TheKrystalShip.Speech.Engine" Version="2.5.1" />
+    <PackageReference Include="TheKrystalShip.Speech.Engine.Kokoro" Version="1.0.0" />
 
     <!-- The natives are the host's choice, because which card a machine has is not the engine's
          business. Both runtimes ship: whisper.net picks the first that initialises, so one binary is

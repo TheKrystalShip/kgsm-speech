@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — synthesis is a package this host references, not a setting it turns on
+
+Registering `KokoroSynthesis` is what makes this host answer out loud. The flag it replaces was
+honest about behaviour and dishonest about cost: a host that only listens still carried every
+managed assembly Kokoro's text normalisation brings with it. Nothing changes here, because this
+host does speak — what changes is that a host which does not can now avoid the weight entirely.
+
 ### Changed — the engine moves to a repository that belongs to neither product
 
 Nothing in the wire protocol, the client or the models behind them is about game servers, so

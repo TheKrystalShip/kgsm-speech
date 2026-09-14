@@ -7,6 +7,7 @@ using Microsoft.Win32.SafeHandles;
 
 using TheKrystalShip.Speech;
 using TheKrystalShip.Speech.Engine;
+using TheKrystalShip.Speech.Engine.Kokoro;
 using TheKrystalShip.KGSM.Speech.Daemon;
 using TheKrystalShip.KGSM.Core.Models;
 using TheKrystalShip.KGSM.Events;
@@ -102,7 +103,10 @@ var lifecycle = new LeafLifecycle(
     startedAt: null,
     degraded: LeafState.DegradedComponentsFor("kgsm-speech"));
 
-await new SpeechServer(listener, options.ForEngine(), new KgsmSpeechHealth(lifecycle), logger)
+// This host answers out loud: it is the voice every KGSM surface speaks with, so it registers a
+// synthesiser. A host that only listens registers none and carries none of Kokoro's weight.
+await new SpeechServer(
+        listener, options.ForEngine(), new KgsmSpeechHealth(lifecycle), logger, new KokoroSynthesis())
     .RunAsync(stopping.Token);
 return 0;
 

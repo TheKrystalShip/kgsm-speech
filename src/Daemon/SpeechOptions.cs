@@ -165,9 +165,6 @@ public class SpeechOptions
         SpeechModelPath = SpeechModelPath,
         SpeakUseGpu = SpeakUseGpu,
 
-        // This host answers out loud: it is the voice every KGSM surface speaks with.
-        Synthesis = true,
-
         Voice = Voice,
         SpeechRate = SpeechRate,
         IdleMinutes = IdleMinutes,
