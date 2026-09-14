@@ -1,4 +1,5 @@
 using TheKrystalShip.KGSM.ComponentConfig;
+using TheKrystalShip.Speech.Engine;
 
 namespace TheKrystalShip.KGSM.Speech.Daemon;
 
@@ -77,10 +78,10 @@ public class SpeechOptions
     public string Voice { get; set; } = "af_heart";
 
     /// <summary>The slowest this host will speak, as a percentage of Kokoro's natural pace.</summary>
-    public const int SlowestRate = 50;
+    public const int SlowestRate = SpeechEngineOptions.SlowestRate;
 
     /// <summary>The fastest this host will speak, as a percentage of Kokoro's natural pace.</summary>
-    public const int FastestRate = 200;
+    public const int FastestRate = SpeechEngineOptions.FastestRate;
 
     /// <summary>
     /// How fast this host speaks, as a percentage of the voice's natural pace.
@@ -147,4 +148,29 @@ public class SpeechOptions
     [ConfigField("socketPath", "Control socket", Group = "wiring", Type = ConfigType.Path,
         Risk = ConfigRisk.Wiring)]
     public string SocketPath { get; set; } = "/run/kgsm-speech/speech.sock";
+
+    /// <summary>
+    /// This host's settings as the engine reads them.
+    /// </summary>
+    /// <remarks>
+    /// The two shapes are deliberately separate. This one is what the Control Panel configures and
+    /// what the descriptor is generated from, so it carries the vocabulary that describes a knob to a
+    /// person. The engine's carries none of that, because the other product that embeds the engine
+    /// describes its configuration a different way and neither should have to know about the other.
+    /// </remarks>
+    public SpeechEngineOptions ForEngine() => new()
+    {
+        ModelPath = ModelPath,
+        UseGpu = UseGpu,
+        SpeechModelPath = SpeechModelPath,
+        SpeakUseGpu = SpeakUseGpu,
+
+        // This host answers out loud: it is the voice every KGSM surface speaks with.
+        Synthesis = true,
+
+        Voice = Voice,
+        SpeechRate = SpeechRate,
+        IdleMinutes = IdleMinutes,
+        SocketPath = SocketPath,
+    };
 }

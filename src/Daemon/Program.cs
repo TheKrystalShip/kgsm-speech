@@ -5,7 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
 
-using TheKrystalShip.KGSM.Speech;
+using TheKrystalShip.Speech;
+using TheKrystalShip.Speech.Engine;
 using TheKrystalShip.KGSM.Speech.Daemon;
 using TheKrystalShip.KGSM.Core.Models;
 using TheKrystalShip.KGSM.Events;
@@ -101,7 +102,8 @@ var lifecycle = new LeafLifecycle(
     startedAt: null,
     degraded: LeafState.DegradedComponentsFor("kgsm-speech"));
 
-await new SpeechServer(listener, options, lifecycle, logger).RunAsync(stopping.Token);
+await new SpeechServer(listener, options.ForEngine(), new KgsmSpeechHealth(lifecycle), logger)
+    .RunAsync(stopping.Token);
 return 0;
 
 // The listening socket: systemd's when it activated us, our own when somebody ran this by hand.

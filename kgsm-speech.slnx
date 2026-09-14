@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="src/Speech/TheKrystalShip.KGSM.Speech.csproj" />
   <Project Path="src/Daemon/kgsm-speech.csproj" />
   <Project Path="tests/KGSM.Speech.Tests/KGSM.Speech.Tests.csproj" />
 </Solution>

@@ -28,16 +28,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Speech/TheKrystalShip.KGSM.Speech.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="KGSM.Speech.Tests" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Both runtimes ship: whisper.net picks the first that initialises, so one binary is correct
-         on a host with a card and on one without. -->
+    <!-- The wire contract and the engine behind it, neither of which is KGSM's. This host supplies
+         the engine with its configuration, somewhere to report degradation, and a lifetime; the
+         descriptor, the journal and the leaf identity stay here. -->
+    <PackageReference Include="TheKrystalShip.Speech" Version="1.0.0" />
+    <PackageReference Include="TheKrystalShip.Speech.Engine" Version="1.0.0" />
+
+    <!-- The natives are the host's choice, because which card a machine has is not the engine's
+         business. Both runtimes ship: whisper.net picks the first that initialises, so one binary is
+         correct on a host with a card and on one without. -->
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime.Cuda" Version="1.9.1" />

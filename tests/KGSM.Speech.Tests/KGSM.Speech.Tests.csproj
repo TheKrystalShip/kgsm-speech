@@ -14,17 +14,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.6.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5" />
-
-    <!-- For PrimingMeasurement only, which drives both models directly. It is skipped unless
-         KGSM_VOICE_MEASURE=1, so an ordinary test run loads neither. -->
-    <PackageReference Include="Whisper.net" Version="1.9.1" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
-    <PackageReference Include="Whisper.net.Runtime.Cuda" Version="1.9.1" />
-    <PackageReference Include="KokoroSharp" Version="0.8.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Speech/TheKrystalShip.KGSM.Speech.csproj" />
     <ProjectReference Include="../../src/Daemon/kgsm-speech.csproj" />
   </ItemGroup>
 
