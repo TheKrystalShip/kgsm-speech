@@ -30,10 +30,12 @@ Ending a process releases everything. So the models live in one that can end:
 kgsm-speech --voices          # what this host can say, and which voice it uses
 ```
 
-From C#, with the `TheKrystalShip.KGSM.Speech` package:
+From C#, with the `TheKrystalShip.Speech` package:
 
 ```csharp
-await using var speech = new SpeechClient(logger: logger);
+// The client serves whatever daemon is on the other end and cannot know which, so the caller says
+// where. On this host that is kgsm-speech's socket.
+await using var speech = new SpeechClient("/run/kgsm-speech/speech.sock", logger);
 
 speech.Wake();                                          // load now — speech is about to be wanted
 

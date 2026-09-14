@@ -35,10 +35,12 @@ Deploy, like every `kgsm-*` project:
 
 ## The shape
 
-- **`src/Speech`** — `TheKrystalShip.KGSM.Speech`, the **published package**: the wire protocol, the
-  client, and `SpokenSentences`. Every surface that speaks consumes this, so a contract break is a
+- **`TheKrystalShip.Speech`** — the wire protocol, the client, and `SpokenSentences`, consumed from
+  tks-speech as a package. Every surface that speaks consumes the same one, so a contract break is a
   compile break rather than a socket that goes quiet. AOT-safe (hand-rolled framing, no serializer,
-  no reflection).
+  no reflection). It belongs to no product: the daemon on the other end of the socket is this repo's,
+  and the client cannot know that, so **the socket path is the caller's to supply** — this host names
+  it in `SpeechOptions`.
   - **`SpokenSentences` is where a reply is cut into sentences, for everybody.** It takes a reply
     arriving token by token and hands back what is worth speaking, so the first sentence plays while
     the model is still writing the third; `Whole` applies the same rules to a reply that is already
@@ -147,10 +149,6 @@ Deploy, like every `kgsm-*` project:
   That is this repo's **release line**: the number `CHANGELOG.md` headings carry, the number a `v*`
   tag must match, and the number the pacman package ships. `--pkgver` prints the pacman-safe form.
   A package never restates a version; it asks for one.
-- **`TheKrystalShip.KGSM.Speech` in `src/Speech` versions independently** — bump it on **any** change
-  to the framing or the message set, because NuGet caches by id+version and a same-version repack
-  serves a stale dll to a consumer. It is not the release line: a CHANGELOG entry names it when it
-  moves rather than numbering the heading with it.
 - **`kgsm-speech-models` versions independently**, and is the one package here that declares a
   version rather than asking for one: `pkgver` in `packaging/models/PKGBUILD`. It moves when a model
   URL or digest moves and at no other time, so it is not a CHANGELOG heading either — an entry names
