@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.11.0] - 2026-09-17
+
+### Added — scanning for words while people keep talking
+
+The engine this host embeds (`TheKrystalShip.Speech.Engine` 2.6.0) answers scans. A voice surface
+sends the last few seconds of each speaker and gets back the text with the time of each token, so
+kgsm-bot can hear "hey assistant" in the middle of a conversation instead of only after a pause.
+Scans run on a second processor over the loaded whisper model, in a four-second window, and never
+stand in front of a command. `/voice status` and the status report show them as the `scan` lane.
 
 ### Changed — synthesis is a package this host references, not a setting it turns on
 
