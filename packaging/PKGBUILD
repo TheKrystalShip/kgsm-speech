@@ -17,7 +17,7 @@
 # every version bump. Their PKGBUILD is packaging/models/, with its own version.
 
 pkgname=kgsm-speech
-pkgver=1.9.1
+pkgver=1.10.1
 pkgrel=1
 pkgdesc="KGSM speech leaf — the host's voice: recognition and synthesis for every surface"
 arch=('x86_64')
